@@ -2,6 +2,8 @@ name: Build 002 Runtime Test
 on:
   push:
     branches: [debooger2000-build-002]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   runtime:
