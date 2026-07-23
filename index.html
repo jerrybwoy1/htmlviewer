@@ -3,57 +3,144 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Universal Desktop Site Viewer</title>
+<meta name="theme-color" content="#f4f6f8">
+<title>debooger2000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.26.4/babel.min.js"></script>
-<style>
-:root{--bg:#eef1f4;--panel:#fff;--line:#d8dde3;--text:#23272b;--muted:#66707a;--green:#4bb229;--charcoal:#23272b}*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg)}button,input,select,textarea{font:inherit}.app{min-height:100vh;display:flex;flex-direction:column}.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff;border-bottom:1px solid var(--line)}.brand{font-size:14px;font-weight:600;white-space:nowrap}.spacer{flex:1}.btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer}.btn.green{background:var(--green);color:#fff;border-color:var(--green)}.workspace{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:calc(100vh - 53px)}.sidebar{background:#f8fafb;border-right:1px solid var(--line);padding:10px;overflow:auto;height:calc(100vh - 53px);position:sticky;top:53px}.main{min-width:0;padding:10px;overflow:hidden}.card{background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:10px}.card-h{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600}.card-b{padding:10px 12px}.dropzone{display:block;border:1.5px dashed #aeb7c1;border-radius:10px;padding:16px 12px;text-align:center;background:#fff;color:var(--muted)}.dropzone.drag{border-color:var(--green);background:#f4fff0}.file-input{display:none}.small{font-size:12px;color:var(--muted)}.field{width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#fff}textarea.field{min-height:125px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}.file-list{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}.file-item{width:100%;text-align:left;border:1px solid transparent;background:transparent;border-radius:6px;padding:7px 8px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}.file-item:hover,.file-item.active{background:#eef2f5;border-color:#dce2e8}.badge{display:inline-flex;padding:2px 6px;border-radius:999px;background:#edf0f3;font-size:11px;color:#56606a}.viewer-shell{position:relative;background:#cfd4d9;border:1px solid #c4cbd2;border-radius:10px;min-height:calc(100vh - 74px);overflow:auto}.stage-wrap{position:relative;width:1440px;height:900px}.desktop-stage{width:1440px;height:900px;background:#fff;transform-origin:top left;box-shadow:0 0 0 1px rgba(0,0,0,.07)}.desktop-frame{width:1440px;height:900px;border:0;background:#fff;display:block}.meta{display:grid;grid-template-columns:92px 1fr;gap:7px 10px;font-size:12px}.meta b{font-weight:600}.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}.toolbar label{font-size:12px;color:var(--muted)}.range{width:120px}.tabs{display:flex;gap:4px;overflow:auto;margin-bottom:8px}.tab{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 8px;font-size:12px;white-space:nowrap;cursor:pointer}.tab.active{background:#23272b;color:#fff;border-color:#23272b}.notice{padding:8px 10px;background:#fff7dd;border:1px solid #ead79d;border-radius:7px;font-size:12px;color:#66551d;margin-bottom:8px}.hidden{display:none!important}@media(max-width:760px){.workspace{grid-template-columns:1fr}.sidebar{position:relative;top:0;height:auto;border-right:0;border-bottom:1px solid var(--line)}.main{padding:6px}.viewer-shell{min-height:560px}.brand{max-width:140px;overflow:hidden;text-overflow:ellipsis}}
-</style>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
-  <div class="topbar"><div class="brand">Universal Desktop Site Viewer</div><span class="badge" id="statusBadge">Ready</span><div class="spacer"></div><button class="btn" id="fitBtn">Fit desktop</button><button class="btn" id="openBtn">Upload</button></div>
+  <header class="topbar">
+    <div class="brand">debooger2000<small>view • test • compare • explain</small></div>
+    <span class="status-pill" id="statusBadge"><span class="dot"></span><span id="statusText">Ready</span></span>
+    <div class="spacer"></div>
+    <button class="btn hide-phone" id="openAudit">Audit report</button>
+    <button class="btn" id="fullBtn">Full screen</button>
+    <button class="btn primary" id="openBtn">Upload</button>
+  </header>
+
   <div class="workspace">
     <aside class="sidebar">
-      <div class="card"><div class="card-h">Upload from phone or computer</div><div class="card-b">
-        <label id="dropzone" class="dropzone"><input id="fileInput" class="file-input" type="file" multiple><strong>Tap to choose files</strong><br><span class="small">HTML, CSS, JS, React/JSX, ZIP, images, PDF, JSON, TXT and most other files</span></label>
-        <div style="height:8px"></div>
-        <label class="dropzone"><input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple><strong>Choose folder</strong><br><span class="small">Available where folder picking is supported</span></label>
-      </div></div>
-      <div class="card"><div class="card-h">Paste code</div><div class="card-b"><select id="pasteType" class="field"><option value="html">HTML</option><option value="css">CSS</option><option value="js">JavaScript</option><option value="jsx">React / JSX</option><option value="text">Plain text</option></select><div style="height:7px"></div><textarea id="pasteBox" class="field" placeholder="Paste code here..."></textarea><div style="height:7px"></div><button class="btn green" id="renderPaste">Render pasted code</button></div></div>
-      <div class="card"><div class="card-h">Loaded files</div><div class="card-b"><div id="fileList" class="file-list"><div class="small">No files loaded yet.</div></div></div></div>
-      <div class="card"><div class="card-h">Selected file</div><div class="card-b"><div id="meta" class="meta"><b>Name</b><span>—</span><b>Type</b><span>—</span><b>Size</b><span>—</span><b>Description</b><span>—</span></div></div></div>
+      <section class="card">
+        <div class="card-h"><span>Open a project</span><span class="badge">auto-detect</span></div>
+        <div class="card-b">
+          <label id="dropzone" class="dropzone">
+            <input id="fileInput" class="file-input" type="file" multiple>
+            <strong>Tap to choose files or a ZIP</strong><br>
+            <span class="small">Websites, source projects, images, PDFs and most common files</span>
+          </label>
+          <div style="height:7px"></div>
+          <label class="dropzone">
+            <input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple>
+            <strong>Choose a folder</strong><br>
+            <span class="small">Keeps the project folder structure where your browser allows it</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11px;color:var(--muted)"><input id="autoAudit" type="checkbox" checked> Run the audit automatically after upload</label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><span>What did I upload?</span></div>
+        <div class="card-b meta">
+          <b>Project</b><span id="projectType">—</span>
+          <b>Runs with</b><span id="projectRuntime">—</span>
+          <b>Starts at</b><span id="projectEntry">—</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><span>Compare versions</span><span class="badge">smart history</span></div>
+        <div class="card-b">
+          <label class="dropzone">
+            <input id="compareInput" class="file-input" type="file" multiple>
+            <strong>Choose another file or ZIP</strong><br>
+            <span class="small">Shows what changed and which version looks safer to build from</span>
+          </label>
+          <div class="footer-note">The last completed audit is also remembered on this device so a later build can be compared automatically.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><span>Loaded files</span></div>
+        <div class="card-b"><div id="fileList" class="file-list"><div class="small">No files loaded yet.</div></div></div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><span>Selected file</span></div>
+        <div class="card-b"><div id="meta" class="meta"><b>Name</b><span>—</span><b>Type</b><span>—</span><b>Size</b><span>—</span><b>What it is</b><span>—</span></div></div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><span>Audit</span></div>
+        <div class="card-b">
+          <button class="btn green" id="auditBtn" style="width:100%">Run full audit</button>
+          <div class="progress"><span id="auditProgress"></span></div>
+          <div class="compare-upload">
+            <button class="btn" id="copyBtn">Copy</button>
+            <button class="btn" id="pdfBtn">Download PDF</button>
+          </div>
+          <div class="footer-note">Safety mode avoids automatically pressing controls that look like real send, call, payment, delete, publish or other irreversible actions.</div>
+        </div>
+      </section>
     </aside>
+
     <main class="main">
-      <div class="toolbar"><label>Desktop width</label><select id="desktopWidth" class="btn"><option>1280</option><option>1366</option><option selected>1440</option><option>1600</option><option>1920</option></select><label>Zoom</label><input id="zoom" class="range" type="range" min="20" max="125" value="100"><span id="zoomLabel" class="small">100%</span><button class="btn" id="reloadBtn">Reload</button></div>
-      <div id="pageTabs" class="tabs"></div><div id="notice" class="notice hidden"></div>
-      <div id="viewerShell" class="viewer-shell"><div id="stageWrap" class="stage-wrap"><div id="desktopStage" class="desktop-stage"><iframe id="frame" class="desktop-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe></div></div></div>
+      <div class="toolbar">
+        <label>Desktop width</label>
+        <select id="desktopWidth" class="btn"><option>1280</option><option>1366</option><option selected>1440</option><option>1600</option><option>1920</option></select>
+        <label>Zoom</label>
+        <input id="zoom" class="range" type="range" min="20" max="125" value="100">
+        <span id="zoomLabel" class="small">100%</span>
+        <button class="btn" id="fitBtn">Fit</button>
+        <button class="btn" id="reloadBtn">Reload</button>
+      </div>
+      <div id="pageTabs" class="tabs"></div>
+      <div id="notice" class="notice hidden"></div>
+      <div id="viewerShell" class="viewer-shell">
+        <div id="stageWrap" class="stage-wrap">
+          <div id="desktopStage" class="desktop-stage">
+            <iframe id="frame" class="desktop-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </div>
-<script>
-(()=>{
- const S={files:new Map(),urls:new Map(),current:null,width:1440,scale:1}; const $=id=>document.getElementById(id); const frame=$('frame'),stage=$('desktopStage'),wrap=$('stageWrap'),shell=$('viewerShell');
- const norm=p=>String(p||'').replaceAll('\\\\','/').replace(/^\.?\//,''); const extension=n=>{let i=n.lastIndexOf('.');return i<0?'':n.slice(i+1).toLowerCase()};
- function mime(n){let e=extension(n),m={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',json:'application/json',txt:'text/plain',md:'text/markdown',csv:'text/csv',xml:'application/xml',svg:'image/svg+xml',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',pdf:'application/pdf',mp3:'audio/mpeg',wav:'audio/wav',m4a:'audio/mp4',mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm'};return m[e]||'application/octet-stream'}
- function desc(n,t=''){let e=extension(n),m={html:'HTML webpage/document',htm:'HTML webpage/document',css:'CSS stylesheet controlling page appearance',js:'JavaScript source code',mjs:'JavaScript ES module',jsx:'React JSX source code',tsx:'React TypeScript/TSX source code',ts:'TypeScript source code',json:'JSON structured data',txt:'Plain text document',md:'Markdown text document',csv:'Comma-separated spreadsheet/data file',xml:'XML structured data',svg:'SVG vector image',png:'PNG image',jpg:'JPEG image',jpeg:'JPEG image',gif:'GIF image',webp:'WebP image',pdf:'PDF document',zip:'ZIP archive containing one or more files',doc:'Microsoft Word document',docx:'Microsoft Word Open XML document',xls:'Microsoft Excel workbook',xlsx:'Microsoft Excel Open XML workbook',ppt:'Microsoft PowerPoint presentation',pptx:'Microsoft PowerPoint Open XML presentation',mp3:'MP3 audio file',wav:'WAV audio file',m4a:'MPEG-4 audio file',mp4:'MPEG-4 video file',mov:'QuickTime video file',webm:'WebM video file',exe:'Windows executable program',dll:'Windows dynamic-link library',py:'Python source code',php:'PHP source code',java:'Java source code',c:'C source code',cpp:'C++ source code',cs:'C# source code',sql:'SQL database/query script',db:'Database file',sqlite:'SQLite database file'};return m[e]||(t.startsWith('image/')?'Image file':t.startsWith('audio/')?'Audio file':t.startsWith('video/')?'Video file':t.startsWith('text/')?'Text-based file':e?e.toUpperCase()+' file; preview depends on browser support':'File with no extension; type cannot be determined from its name alone')}
- function bytes(n){if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';if(n<1073741824)return(n/1048576).toFixed(1)+' MB';return(n/1073741824).toFixed(2)+' GB'}
- function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
- function status(s){$('statusBadge').textContent=s} function notice(s){$('notice').textContent=s;$('notice').classList.remove('hidden')} function clearNotice(){$('notice').classList.add('hidden');$('notice').textContent=''}
- function dirname(p){let i=p.lastIndexOf('/');return i>=0?p.slice(0,i+1):''} function resolve(base,ref){if(!ref||/^(data:|blob:|https?:|mailto:|tel:|javascript:|#)/i.test(ref))return ref;let a=dirname(base).split('/').filter(Boolean);for(let x of ref.split('/')){if(!x||x==='.')continue;if(x==='..')a.pop();else a.push(x)}return a.join('/')}
- async function obj(path){path=norm(path);if(S.urls.has(path))return S.urls.get(path);let f=S.files.get(path);if(!f)return null;let u=URL.createObjectURL(f);S.urls.set(path,u);return u}
- function refresh(){let el=$('fileList');el.innerHTML='';let names=[...S.files.keys()].sort();if(!names.length){el.innerHTML='<div class="small">No files loaded yet.</div>';return}for(let n of names){let b=document.createElement('button');b.className='file-item'+(S.current===n?' active':'');b.textContent=n;b.title=n;b.onclick=()=>select(n);el.appendChild(b)} tabs()}
- function meta(f,n){$('meta').innerHTML=`<b>Name</b><span>${esc(n)}</span><b>Type</b><span>${esc(f.type||mime(n))}</span><b>Size</b><span>${bytes(f.size)}</span><b>Description</b><span>${esc(desc(n,f.type||''))}</span>`}
- function tabs(){let el=$('pageTabs');el.innerHTML='';let pages=[...S.files.keys()].filter(n=>/\.html?$/i.test(n));if(pages.length<2)return;for(let p of pages){let b=document.createElement('button');b.className='tab'+(S.current===p?' active':'');b.textContent=p.split('/').pop();b.title=p;b.onclick=()=>select(p);el.appendChild(b)}}
- async function add(list){let fs=[...list];if(!fs.length)return;let out=[];for(let f of fs){if(extension(f.name)==='zip'){status('Opening ZIP…');try{let z=await JSZip.loadAsync(f);for(let zf of Object.values(z.files).filter(x=>!x.dir)){let bl=await zf.async('blob');out.push(new File([bl],norm(zf.name),{type:mime(zf.name)}))}}catch(e){out.push(f);notice('The ZIP could not be expanded in this browser. The original ZIP is still listed.')}}else{let n=f.webkitRelativePath||f.name;out.push(new File([f],norm(n),{type:f.type||mime(n)}))}}for(let u of S.urls.values())URL.revokeObjectURL(u);S.urls.clear();S.files.clear();for(let f of out)S.files.set(norm(f.name),f);refresh();status(out.length+' file'+(out.length===1?'':'s')+' loaded');let names=[...S.files.keys()],entry=['index.html','index.htm','src/index.html','public/index.html'].find(p=>names.includes(p))||names.find(n=>/\.html?$/i.test(n))||names.find(n=>/\.(jsx|tsx)$/i.test(n))||names[0];if(entry)select(entry)}
- async function cssRewrite(css,base){for(let m of [...css.matchAll(/url\((['"]?)([^'")]+)\1\)/g)]){let u=await obj(resolve(base,m[2]));if(u)css=css.split(m[0]).join(`url("${u}")`)}return css}
- async function htmlRewrite(src,base){let d=new DOMParser().parseFromString(src,'text/html');for(let l of [...d.querySelectorAll('link[rel="stylesheet"][href]')]){let p=resolve(base,l.getAttribute('href')),f=S.files.get(norm(p));if(f){let st=d.createElement('style');st.textContent=await cssRewrite(await f.text(),p);l.replaceWith(st)}}for(let el of [...d.querySelectorAll('[src],[poster]')])for(let a of ['src','poster']){let r=el.getAttribute(a);if(r){let u=await obj(resolve(base,r));if(u)el.setAttribute(a,u)}}for(let el of [...d.querySelectorAll('[style]')])el.setAttribute('style',await cssRewrite(el.getAttribute('style'),base));for(let s of [...d.querySelectorAll('script[src]')]){let p=resolve(base,s.getAttribute('src')),f=S.files.get(norm(p));if(f){let ns=d.createElement('script');ns.textContent=await f.text();if(s.type)ns.type=s.type;s.replaceWith(ns)}}let nav=d.createElement('script');nav.textContent=`document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a)return;const h=a.getAttribute('href')||'';if(h&&!/^(https?:|mailto:|tel:|javascript:|#)/i.test(h)){e.preventDefault();parent.postMessage({type:'viewer-nav',href:h,base:${JSON.stringify(base)}},'*')}});`;d.body.appendChild(nav);return'<!doctype html>\n'+d.documentElement.outerHTML}
- async function select(n){n=norm(n);let f=S.files.get(n);if(!f)return;S.current=n;refresh();meta(f,n);status('Rendering…');clearNotice();let e=extension(n);try{if(/html?/.test(e)){let src=await htmlRewrite(await f.text(),n),u=URL.createObjectURL(new Blob([src],{type:'text/html'}));S.urls.set('render:'+n,u);frame.removeAttribute('srcdoc');frame.src=u}else if(['jsx','tsx'].includes(e)){let src=await f.text();try{let c=Babel.transform(src,{presets:['react'],filename:n}).code;frame.srcdoc=`<!doctype html><html><head><script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"><\/script><script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"><\/script></head><body><div id="root"></div><script>${c}<\/script></body></html>`;notice('React/JSX preview is best for self-contained components. Projects with npm imports, bundlers, or a backend may need compiled output.')}catch(x){await text(f)}}else if(['css','js','mjs','ts','json','txt','md','csv','xml','py','php','java','c','cpp','cs','sql'].includes(e))await text(f);else if((f.type||'').startsWith('image/')||['png','jpg','jpeg','gif','webp','bmp','svg','ico'].includes(e)){let u=URL.createObjectURL(f);S.urls.set('render:'+n,u);frame.srcdoc=`<!doctype html><html><body style="margin:0;background:#fff"><img src="${u}" style="max-width:100%;height:auto;display:block;margin:20px auto"></body></html>`}else if((f.type||'').startsWith('audio/')){let u=URL.createObjectURL(f);S.urls.set('render:'+n,u);frame.srcdoc=`<audio src="${u}" controls style="display:block;margin:40px auto;width:80%"></audio>`}else if((f.type||'').startsWith('video/')){let u=URL.createObjectURL(f);S.urls.set('render:'+n,u);frame.srcdoc=`<video src="${u}" controls style="max-width:95%;display:block;margin:20px auto"></video>`}else if(e==='pdf'){let u=URL.createObjectURL(f);S.urls.set('render:'+n,u);frame.removeAttribute('srcdoc');frame.src=u}else frame.srcdoc=`<!doctype html><html><body style="font-family:Inter,system-ui,sans-serif;padding:32px"><h2>${esc(n)}</h2><p><b>What it is:</b> ${esc(desc(n,f.type||''))}</p><p><b>Browser preview:</b> This format is not safely renderable directly in this viewer.</p><p><b>Size:</b> ${bytes(f.size)}</p><p><b>MIME:</b> ${esc(f.type||mime(n))}</p></body></html>`;status('Ready');fit()}catch(err){frame.srcdoc=`<pre style="white-space:pre-wrap;padding:20px">${esc(String(err))}</pre>`;status('Render error')}}
- async function text(f){let t=await f.text();frame.srcdoc=`<!doctype html><html><body style="margin:0"><pre style="white-space:pre-wrap;word-break:break-word;margin:0;padding:16px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#101317;color:#e7edf3;min-height:100vh">${esc(t)}</pre></body></html>`}
- function setWidth(w){S.width=+w;stage.style.width=S.width+'px';frame.style.width=S.width+'px';fit()} function scale(s){S.scale=Math.max(.2,Math.min(1.25,s));stage.style.transform=`scale(${S.scale})`;wrap.style.width=(S.width*S.scale)+'px';wrap.style.height=(900*S.scale)+'px';$('zoom').value=Math.round(S.scale*100);$('zoomLabel').textContent=Math.round(S.scale*100)+'%'} function fit(){requestAnimationFrame(()=>scale(Math.min(1,Math.max(300,shell.clientWidth-2)/S.width)))}
- async function renderPaste(){let t=$('pasteType').value,s=$('pasteBox').value;if(!s.trim())return;let n=t==='html'?'pasted.html':t==='css'?'pasted.css':t==='js'?'pasted.js':t==='jsx'?'pasted.jsx':'pasted.txt',f=new File([s],n,{type:mime(n)});S.files.set(n,f);if(t==='css'){S.current=n;refresh();meta(f,n);frame.srcdoc=`<!doctype html><html><head><style>${s}</style></head><body><div style="padding:24px"><h1>CSS Preview</h1><p>Your CSS is active on this preview document.</p><button>Button</button><input placeholder="Input"></div></body></html>`;fit()}else if(t==='js'){S.current=n;refresh();meta(f,n);frame.srcdoc=`<!doctype html><html><body><div id="app" style="padding:20px;font-family:system-ui">JavaScript preview page</div><script>${s}<\/script></body></html>`;fit()}else select(n)}
- window.addEventListener('message',e=>{if(e.data?.type==='viewer-nav'){let p=norm(resolve(e.data.base,e.data.href));if(S.files.has(p))select(p)}}); ['dragenter','dragover'].forEach(v=>$('dropzone').addEventListener(v,e=>{e.preventDefault();$('dropzone').classList.add('drag')}));['dragleave','drop'].forEach(v=>$('dropzone').addEventListener(v,e=>{e.preventDefault();$('dropzone').classList.remove('drag')}));$('dropzone').addEventListener('drop',e=>add(e.dataTransfer.files));$('fileInput').onchange=e=>add(e.target.files);$('folderInput').onchange=e=>add(e.target.files);$('openBtn').onclick=()=>$('fileInput').click();$('renderPaste').onclick=renderPaste;$('fitBtn').onclick=fit;$('reloadBtn').onclick=()=>S.current&&select(S.current);$('desktopWidth').onchange=e=>setWidth(e.target.value);$('zoom').oninput=e=>scale(+e.target.value/100);window.addEventListener('resize',()=>innerWidth<900&&fit());setWidth(1440);frame.srcdoc='<!doctype html><html><body style="font-family:Inter,system-ui,sans-serif;padding:44px"><h1>Desktop Site Viewer</h1><p>Upload a website, ZIP, individual files, or paste code. The page remains at desktop width and scales down so you can inspect the full layout from a phone.</p></body></html>';
-})();
-</script>
+
+<aside id="auditDrawer" class="audit-drawer hidden" aria-label="Audit report">
+  <div class="audit-head">
+    <h2>Audit report</h2>
+    <div class="spacer"></div>
+    <button class="btn" id="closeAudit">Close</button>
+  </div>
+  <div class="audit-body">
+    <div class="score-grid">
+      <div class="score"><div class="n" id="scoreOverall">—</div><div class="l">overall health</div></div>
+      <div class="score"><div class="n" id="scoreFiles">0</div><div class="l">files checked</div></div>
+      <div class="score"><div class="n" id="scoreIssues">0</div><div class="l">things to review</div></div>
+    </div>
+    <div class="summary-box"><h3>Easy explanation</h3><p id="simpleSummary">Run an audit and I will explain the result in plain English.</p></div>
+    <div class="summary-box"><h3>What this project is</h3><p id="projectExplain">—</p></div>
+    <div class="card"><div class="card-h">Which version is better?</div><div class="card-b" id="comparison"><div class="small">A comparison appears after another version is loaded or after a later audit.</div></div></div>
+    <div class="card"><div class="card-h">What looks good</div><div class="card-b" id="goodList"></div></div>
+    <div class="card"><div class="card-h">Problems and fixes</div><div class="card-b" id="issueList"></div></div>
+    <div class="card"><div class="card-h">Button and control tests</div><div class="card-b" id="controlList"></div></div>
+    <div class="card"><div class="card-h">Real screenshots</div><div class="card-b"><div id="gallery" class="gallery"><div class="small">Screenshots appear here during an audit.</div></div></div></div>
+  </div>
+</aside>
+
+<div id="shotModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-bar"><strong id="shotTitle">Screenshot</strong><div class="spacer"></div><button class="btn" id="closeShot">Close</button></div>
+    <img id="shotImage" alt="Audit screenshot">
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
