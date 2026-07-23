@@ -35,10 +35,10 @@
       <details class="card settings-card">
         <summary class="card-h">Optional AI providers</summary>
         <div class="card-b">
-          <div class="small">Core viewing and auditing works without an API. Keys are optional for later AI comparisons.</div>
+          <div class="small">Core viewing and auditing works without an API. Provider keys are optional and stay only for this browser session.</div>
           <div class="section-title">Groq</div><label class="row small"><input id="groqEnabled" type="checkbox" aria-label="Enable Groq"> Enable</label><input class="field" id="groqKey" type="password" aria-label="Groq API key" autocomplete="off" placeholder="Groq API key">
           <div class="section-title">Google AI Studio</div><label class="row small"><input id="googleEnabled" type="checkbox" aria-label="Enable Google AI Studio"> Enable</label><input class="field" id="googleKey" type="password" aria-label="Google AI Studio API key" autocomplete="off" placeholder="Google AI Studio API key">
-          <div class="tiny-gap"></div><button class="btn full" id="saveProviders">Save settings on this device</button><div class="small provider-note">Active: <span id="providerStatus">Local / no API</span></div>
+          <div class="tiny-gap"></div><button class="btn full" id="saveProviders">Use for this session</button><div class="small provider-note">Active: <span id="providerStatus">Local / no API</span></div>
         </div>
       </details>
     </aside>
