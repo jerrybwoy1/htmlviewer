@@ -14,54 +14,96 @@
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="brand">debooger2000</div><span class="status" id="statusBadge">Ready</span>
+    <div class="brand">debooger2000</div>
+    <span class="status" id="statusBadge">Ready</span>
     <div class="spacer"></div>
-    <button class="btn hide-mobile" id="auditBtn">Audit</button>
-    <button class="btn hide-mobile" id="copyBtn">Copy</button>
-    <button class="btn hide-mobile" id="downloadBtn">Download report</button>
-    <button class="btn primary" id="openBtn">Upload</button>
+    <button class="btn" id="pasteBtn">Paste</button>
+    <button class="btn" id="clearBtn">Clear</button>
+    <button class="btn" id="fullBtn">Full screen</button>
+    <button class="btn primary" id="openBtn">Open</button>
   </header>
+
   <div class="workspace">
     <aside class="rail">
       <div class="card"><div class="card-h">Open a project</div><div class="card-b">
-        <label id="dropzone" class="dropzone"><input id="fileInput" class="file-input" type="file" multiple><strong>Tap to choose files or a ZIP</strong><br><span class="small">Websites, apps, source projects, images, PDFs and mixed project folders</span></label>
-        <div style="height:8px"></div>
-        <label class="dropzone"><input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple><strong>Choose a folder</strong><br><span class="small">Folder picking is available where the browser supports it</span></label>
+        <label id="dropzone" class="dropzone"><input id="fileInput" class="file-input" type="file" multiple><strong>Tap to choose files or a ZIP</strong><br><span class="small">ZIPs open automatically. You do not need to extract them first.</span></label>
+        <div class="tiny-gap"></div>
+        <label class="dropzone"><input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple><strong>Choose a folder</strong><br><span class="small">Keeps the folder structure where your browser supports it.</span></label>
       </div></div>
-      <div class="card"><div class="card-h">What did I upload?</div><div class="card-b" id="projectSummary"><div class="small">Upload something and debooger2000 will explain what it is.</div></div></div>
+
+      <div class="card"><div class="card-h">What did I upload?</div><div class="card-b" id="projectSummary"><div class="small">Open something and debooger2000 will explain what it is.</div></div></div>
       <div class="card"><div class="card-h">Loaded files</div><div class="card-b"><div id="fileList" class="file-list"><div class="small">No files loaded yet.</div></div></div></div>
       <div class="card"><div class="card-h">Previous audits</div><div class="card-b" id="history"><div class="small">No previous audits saved on this device.</div></div></div>
-      <div class="card"><div class="card-h">Optional AI providers</div><div class="card-b">
-        <div class="small">Core testing works without an API. Add keys later to compare AI explanations or repair suggestions.</div>
-        <div class="section-title">Groq</div><label class="row small"><input id="groqEnabled" type="checkbox"> Enable</label><input class="field" id="groqKey" type="password" autocomplete="off" placeholder="Paste Groq API key">
-        <div class="section-title">Google AI Studio</div><label class="row small"><input id="googleEnabled" type="checkbox"> Enable</label><input class="field" id="googleKey" type="password" autocomplete="off" placeholder="Paste Google AI Studio API key">
-        <div style="height:8px"></div><button class="btn" id="saveProviders" style="width:100%">Save settings on this device</button><div class="small" style="margin-top:7px">Active: <span id="providerStatus">Local / no API</span></div>
-      </div></div>
+
+      <details class="card settings-card">
+        <summary class="card-h">Optional AI providers</summary>
+        <div class="card-b">
+          <div class="small">Core viewing and auditing works without an API. Keys are optional for later AI comparisons.</div>
+          <div class="section-title">Groq</div>
+          <label class="row small"><input id="groqEnabled" type="checkbox"> Enable</label>
+          <input class="field" id="groqKey" type="password" autocomplete="off" placeholder="Groq API key">
+          <div class="section-title">Google AI Studio</div>
+          <label class="row small"><input id="googleEnabled" type="checkbox"> Enable</label>
+          <input class="field" id="googleKey" type="password" autocomplete="off" placeholder="Google AI Studio API key">
+          <div class="tiny-gap"></div>
+          <button class="btn full" id="saveProviders">Save settings on this device</button>
+          <div class="small provider-note">Active: <span id="providerStatus">Local / no API</span></div>
+        </div>
+      </details>
     </aside>
 
     <main class="main">
       <div class="toolbar">
-        <div class="device-group">
+        <div class="device-group" aria-label="Preview device">
           <button class="device-btn active" data-device="desktop">Desktop</button>
           <button class="device-btn" data-device="tablet">iPad</button>
           <button class="device-btn" data-device="mobile">Mobile</button>
         </div>
-        <label class="row small"><input id="adaptToggle" type="checkbox"> Adapt layout for this device</label>
-        <div class="spacer"></div>
-        <span class="small">The original project is never changed by preview adaptation.</span>
+        <select id="desktopWidth" class="btn compact" aria-label="Desktop width">
+          <option value="1280">1280</option><option value="1366">1366</option><option value="1440" selected>1440</option><option value="1600">1600</option><option value="1920">1920</option>
+        </select>
+        <button class="btn compact" id="fitWidthBtn">Fit width</button>
+        <button class="btn compact" id="fitPageBtn">Fit page</button>
+        <button class="btn compact" id="actualBtn">100%</button>
+        <label class="row small"><input id="adaptToggle" type="checkbox"> Adapt preview</label>
       </div>
       <div id="pageTabs" class="tabs"></div>
       <div id="notice" class="notice hidden"></div>
-      <div id="viewerShell" class="viewer-shell"><div id="stageWrap" class="stage-wrap"><div id="desktopStage" class="desktop-stage"><iframe id="frame" class="desktop-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe></div></div></div>
+      <div id="viewerShell" class="viewer-shell">
+        <div id="stageWrap" class="stage-wrap">
+          <div id="desktopStage" class="desktop-stage">
+            <iframe id="frame" class="desktop-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+          </div>
+        </div>
+      </div>
+      <button class="viewer-float hidden" id="exitFullBtn">Exit full screen</button>
     </main>
 
     <aside class="rail right">
-      <div class="card"><div class="card-h">Audit health</div><div class="card-b"><div id="scoreBox"><div class="score">—</div><div class="small">Run an audit to begin.</div></div><div style="height:10px"></div><div id="metrics" class="metric-grid"></div></div></div>
+      <div class="card"><div class="card-h">Audit health</div><div class="card-b"><div id="scoreBox"><div class="score">—</div><div class="small">Run an audit to begin.</div></div><div class="tiny-gap"></div><div id="metrics" class="metric-grid"></div></div></div>
       <div id="compareBox" class="hidden"></div>
-      <div class="card"><div class="card-h">What needs attention</div><div class="card-b" id="findings"><div class="small">Problems will be explained here in easy English. Developer details stay attached to each finding.</div></div></div>
+      <div class="card"><div class="card-h">What needs attention</div><div class="card-b" id="findings"><div class="small">Problems are explained in easy English. Technical details stay attached when useful.</div></div></div>
+      <div class="action-grid"><button class="btn" id="auditBtn">Audit</button><button class="btn" id="copyBtn">Copy</button><button class="btn" id="downloadBtn">Download report</button></div>
     </aside>
   </div>
 </div>
+
+<div class="modal hidden" id="pasteModal" role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
+  <div class="modal-card paste-card">
+    <div class="modal-head"><strong id="pasteTitle">Paste into debooger2000</strong><button class="btn" id="closePasteBtn">Close</button></div>
+    <div class="paste-tabs"><button class="paste-tab active" data-paste="text">Code / text</button><button class="paste-tab" data-paste="link">Link</button></div>
+    <div id="pasteTextPanel">
+      <textarea id="pasteText" class="field paste-area" placeholder="Paste HTML, CSS, JavaScript, JSON, or text here..."></textarea>
+      <div class="paste-row"><select id="pasteType" class="field"><option value="html">HTML</option><option value="css">CSS</option><option value="js">JavaScript</option><option value="json">JSON</option><option value="txt">Text</option></select><button class="btn primary" id="openPasteTextBtn">Open temporary preview</button></div>
+    </div>
+    <div id="pasteLinkPanel" class="hidden">
+      <input id="pasteLink" class="field" type="url" inputmode="url" placeholder="Paste a direct file or ZIP link">
+      <div class="small provider-note">Some AI download links only work inside the app that created them. debooger2000 will tell you if the link cannot be fetched directly.</div>
+      <button class="btn primary full" id="openPasteLinkBtn">Open link temporarily</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
