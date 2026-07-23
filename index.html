@@ -16,131 +16,69 @@
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="brand">debooger2000<small>view • test • compare • explain</small></div>
+    <div class="brand">debooger2000<small>view • audit • compare • explain</small></div>
     <span class="status-pill" id="statusBadge"><span class="dot"></span><span id="statusText">Ready</span></span>
     <div class="spacer"></div>
     <button class="btn hide-phone" id="openAudit">Audit report</button>
     <button class="btn" id="fullBtn">Full screen</button>
     <button class="btn primary" id="openBtn">Upload</button>
   </header>
-
   <div class="workspace">
     <aside class="sidebar">
       <section class="card">
         <div class="card-h"><span>Open a project</span><span class="badge">auto-detect</span></div>
         <div class="card-b">
-          <label id="dropzone" class="dropzone">
-            <input id="fileInput" class="file-input" type="file" multiple>
-            <strong>Tap to choose files or a ZIP</strong><br>
-            <span class="small">Websites, source projects, images, PDFs and most common files</span>
-          </label>
+          <label id="dropzone" class="dropzone"><input id="fileInput" class="file-input" type="file" multiple><strong>Tap to choose files or a ZIP</strong><br><span class="small">Websites, source projects, images, PDFs and most common files</span></label>
           <div style="height:7px"></div>
-          <label class="dropzone">
-            <input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple>
-            <strong>Choose a folder</strong><br>
-            <span class="small">Keeps the project folder structure where your browser allows it</span>
-          </label>
+          <label class="dropzone"><input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple><strong>Choose a folder</strong><br><span class="small">Keeps the project folder structure where your browser allows it</span></label>
           <label style="display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11px;color:var(--muted)"><input id="autoAudit" type="checkbox" checked> Run the audit automatically after upload</label>
         </div>
       </section>
-
       <section class="card">
         <div class="card-h"><span>What did I upload?</span></div>
-        <div class="card-b meta">
-          <b>Project</b><span id="projectType">—</span>
-          <b>Runs with</b><span id="projectRuntime">—</span>
-          <b>Starts at</b><span id="projectEntry">—</span>
-        </div>
+        <div class="card-b meta"><b>Project</b><span id="projectType">—</span><b>Runs with</b><span id="projectRuntime">—</span><b>Starts at</b><span id="projectEntry">—</span></div>
       </section>
-
       <section class="card">
         <div class="card-h"><span>Compare versions</span><span class="badge">smart history</span></div>
         <div class="card-b">
-          <label class="dropzone">
-            <input id="compareInput" class="file-input" type="file" multiple>
-            <strong>Choose another file or ZIP</strong><br>
-            <span class="small">Shows what changed and which version looks safer to build from</span>
-          </label>
-          <div class="footer-note">The last completed audit is also remembered on this device so a later build can be compared automatically.</div>
+          <label class="dropzone"><input id="compareInput" class="file-input" type="file" multiple><strong>Choose another file or ZIP</strong><br><span class="small">Shows what changed and which version looks safer to build from</span></label>
+          <div class="footer-note">The last completed audit is remembered on this device so a later build can be compared automatically.</div>
         </div>
       </section>
-
-      <section class="card">
-        <div class="card-h"><span>Loaded files</span></div>
-        <div class="card-b"><div id="fileList" class="file-list"><div class="small">No files loaded yet.</div></div></div>
-      </section>
-
-      <section class="card">
-        <div class="card-h"><span>Selected file</span></div>
-        <div class="card-b"><div id="meta" class="meta"><b>Name</b><span>—</span><b>Type</b><span>—</span><b>Size</b><span>—</span><b>What it is</b><span>—</span></div></div>
-      </section>
-
+      <section class="card"><div class="card-h"><span>Loaded files</span></div><div class="card-b"><div id="fileList" class="file-list"><div class="small">No files loaded yet.</div></div></div></section>
+      <section class="card"><div class="card-h"><span>Selected file</span></div><div class="card-b"><div id="meta" class="meta"><b>Name</b><span>—</span><b>Type</b><span>—</span><b>Size</b><span>—</span><b>What it is</b><span>—</span></div></div></section>
       <section class="card">
         <div class="card-h"><span>Audit</span></div>
         <div class="card-b">
           <button class="btn green" id="auditBtn" style="width:100%">Run full audit</button>
           <div class="progress"><span id="auditProgress"></span></div>
-          <div class="compare-upload">
-            <button class="btn" id="copyBtn">Copy</button>
-            <button class="btn" id="pdfBtn">Download PDF</button>
-          </div>
-          <div class="footer-note">Safety mode avoids automatically pressing controls that look like real send, call, payment, delete, publish or other irreversible actions.</div>
+          <div class="compare-upload"><button class="btn" id="copyBtn">Copy</button><button class="btn" id="pdfBtn">Download PDF</button></div>
+          <div class="footer-note">The browser audit is read-only. It checks source, rendered pages, layout, runtime errors and screenshots without changing the uploaded files.</div>
         </div>
       </section>
     </aside>
-
     <main class="main">
-      <div class="toolbar">
-        <label>Desktop width</label>
-        <select id="desktopWidth" class="btn"><option>1280</option><option>1366</option><option selected>1440</option><option>1600</option><option>1920</option></select>
-        <label>Zoom</label>
-        <input id="zoom" class="range" type="range" min="20" max="125" value="100">
-        <span id="zoomLabel" class="small">100%</span>
-        <button class="btn" id="fitBtn">Fit</button>
-        <button class="btn" id="reloadBtn">Reload</button>
-      </div>
+      <div class="toolbar"><label>Desktop width</label><select id="desktopWidth" class="btn"><option>1280</option><option>1366</option><option selected>1440</option><option>1600</option><option>1920</option></select><label>Zoom</label><input id="zoom" class="range" type="range" min="20" max="125" value="100"><span id="zoomLabel" class="small">100%</span><button class="btn" id="fitBtn">Fit</button><button class="btn" id="reloadBtn">Reload</button></div>
       <div id="pageTabs" class="tabs"></div>
       <div id="notice" class="notice hidden"></div>
-      <div id="viewerShell" class="viewer-shell">
-        <div id="stageWrap" class="stage-wrap">
-          <div id="desktopStage" class="desktop-stage">
-            <iframe id="frame" class="desktop-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
-          </div>
-        </div>
-      </div>
+      <div id="viewerShell" class="viewer-shell"><div id="stageWrap" class="stage-wrap"><div id="desktopStage" class="desktop-stage"><iframe id="frame" class="desktop-frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe></div></div></div>
     </main>
   </div>
 </div>
-
 <aside id="auditDrawer" class="audit-drawer hidden" aria-label="Audit report">
-  <div class="audit-head">
-    <h2>Audit report</h2>
-    <div class="spacer"></div>
-    <button class="btn" id="closeAudit">Close</button>
-  </div>
+  <div class="audit-head"><h2>Audit report</h2><div class="spacer"></div><button class="btn" id="closeAudit">Close</button></div>
   <div class="audit-body">
-    <div class="score-grid">
-      <div class="score"><div class="n" id="scoreOverall">—</div><div class="l">overall health</div></div>
-      <div class="score"><div class="n" id="scoreFiles">0</div><div class="l">files checked</div></div>
-      <div class="score"><div class="n" id="scoreIssues">0</div><div class="l">things to review</div></div>
-    </div>
+    <div class="score-grid"><div class="score"><div class="n" id="scoreOverall">—</div><div class="l">overall health</div></div><div class="score"><div class="n" id="scoreFiles">0</div><div class="l">files checked</div></div><div class="score"><div class="n" id="scoreIssues">0</div><div class="l">things to review</div></div></div>
     <div class="summary-box"><h3>Easy explanation</h3><p id="simpleSummary">Run an audit and I will explain the result in plain English.</p></div>
     <div class="summary-box"><h3>What this project is</h3><p id="projectExplain">—</p></div>
     <div class="card"><div class="card-h">Which version is better?</div><div class="card-b" id="comparison"><div class="small">A comparison appears after another version is loaded or after a later audit.</div></div></div>
     <div class="card"><div class="card-h">What looks good</div><div class="card-b" id="goodList"></div></div>
     <div class="card"><div class="card-h">Problems and fixes</div><div class="card-b" id="issueList"></div></div>
-    <div class="card"><div class="card-h">Button and control tests</div><div class="card-b" id="controlList"></div></div>
     <div class="card"><div class="card-h">Real screenshots</div><div class="card-b"><div id="gallery" class="gallery"><div class="small">Screenshots appear here during an audit.</div></div></div></div>
   </div>
 </aside>
-
-<div id="shotModal" class="modal hidden">
-  <div class="modal-card">
-    <div class="modal-bar"><strong id="shotTitle">Screenshot</strong><div class="spacer"></div><button class="btn" id="closeShot">Close</button></div>
-    <img id="shotImage" alt="Audit screenshot">
-  </div>
-</div>
-
-<script src="app.js"></script>
+<div id="shotModal" class="modal hidden"><div class="modal-card"><div class="modal-bar"><strong id="shotTitle">Screenshot</strong><div class="spacer"></div><button class="btn" id="closeShot">Close</button></div><img id="shotImage" alt="Audit screenshot"></div></div>
+<script src="core.js"></script>
+<script src="audit.js"></script>
 </body>
 </html>
