@@ -24,3 +24,10 @@ jobs:
           sleep 2
       - name: Run browser regression
         run: node tests/build002-runtime.mjs
+      - name: Upload regression diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build002-regression-result
+          path: build002-test-result.json
+          if-no-files-found: warn
