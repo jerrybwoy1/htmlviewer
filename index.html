@@ -53,7 +53,7 @@
           <button class="btn green" id="auditBtn" style="width:100%">Run full audit</button>
           <div class="progress"><span id="auditProgress"></span></div>
           <div class="compare-upload"><button class="btn" id="copyBtn">Copy</button><button class="btn" id="pdfBtn">Download PDF</button></div>
-          <div class="footer-note">The browser audit is read-only. It checks source, rendered pages, layout, runtime errors and screenshots without changing the uploaded files.</div>
+          <div class="footer-note">Safety mode tests normal controls but leaves alone actions that look like they may send, call, pay, delete, publish, or otherwise change something for real.</div>
         </div>
       </section>
     </aside>
@@ -74,6 +74,7 @@
     <div class="card"><div class="card-h">Which version is better?</div><div class="card-b" id="comparison"><div class="small">A comparison appears after another version is loaded or after a later audit.</div></div></div>
     <div class="card"><div class="card-h">What looks good</div><div class="card-b" id="goodList"></div></div>
     <div class="card"><div class="card-h">Problems and fixes</div><div class="card-b" id="issueList"></div></div>
+    <div class="card"><div class="card-h">Button and control tests</div><div class="card-b" id="controlList"><div class="small">Safe interaction tests appear here during an audit.</div></div></div>
     <div class="card"><div class="card-h">Real screenshots</div><div class="card-b"><div id="gallery" class="gallery"><div class="small">Screenshots appear here during an audit.</div></div></div></div>
   </div>
 </aside>
