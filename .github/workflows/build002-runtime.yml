@@ -1,0 +1,24 @@
+name: Build 002 Runtime Test
+on:
+  push:
+    branches: [debooger2000-build-002]
+  workflow_dispatch:
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm init -y
+      - run: npm install playwright jszip
+      - run: npx playwright install chromium --with-deps
+      - name: Start local server
+        run: |
+          python3 -m http.server 4173 >/tmp/debooger-server.log 2>&1 &
+          echo $! > /tmp/debooger-server.pid
+          sleep 2
+      - name: Run browser regression
+        run: node tests/build002-runtime.mjs
