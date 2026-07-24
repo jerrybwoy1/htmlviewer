@@ -162,7 +162,7 @@ function auditHtml(name,text,ctx){
   if(!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(text))issue(ctx,'html.viewport','warning','medium','This page may not size correctly on phones','The page is missing the normal mobile viewport setting, so a phone may show it zoomed out or at the wrong width.','Missing viewport meta tag.',name,1);
 
   ran(ctx,'html.title');
-  const title=doc?.querySelector('title')?.textContent?.trim()||'';
+  const title=(doc?.querySelector('title')?.textContent||text.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').trim();
   if(!title)issue(ctx,'html.title','info','medium','The browser tab has no page name','The page does not have a useful <title>. The site can still run, but the browser tab will be unclear.','Missing or empty <title>.',name,1,false);
 
   ran(ctx,'html.structural-tags');
@@ -488,8 +488,10 @@ function auditJs(name,text,ctx){
   if(write)issue(ctx,'js.document-write','warning','high','The app writes directly into the page with document.write','document.write can replace the whole page or block loading. Modern code usually adds elements without using this command.','document.write/document.writeln detected.',name,lineOf(text,write.index));
 
   ran(ctx,'js.innerhtml');
-  const riskyInner=[...text.matchAll(/\.innerHTML\s*=\s*[^;\n]*(?:\.value\b|location\b|searchParams\b|responseText\b|event\.data\b|message\b)/gi)];
-  if(riskyInner.length)issue(ctx,'js.innerhtml','info','low','Some outside or user-controlled text may be placed into innerHTML','I found an innerHTML assignment whose value appears to come from input, a URL, a response, or a message. It may already be cleaned first, so this is review-only.','Potentially dynamic innerHTML assignment detected.',name,lineOf(text,riskyInner[0].index),false);
+  const riskyInner=[...text.matchAll(/\.innerHTML\s*=\s*([^;\n]*)/gi)]
+    .filter(match=>/(?:\.value\b|\blocation(?:\.|\[)|\bsearchParams(?:\.|\[)|\bresponseText\b|\bevent\.data\b|(?<![\w-])message(?:\.|\[|\)|,|\s*\?))/i.test(match[1]||''))
+    .filter(match=>!/(?:\besc|escapeHtml|sanitize|DOMPurify\.sanitize)\s*\(/i.test(match[0]));
+  if(riskyInner.length)issue(ctx,'js.innerhtml','info','low','Some outside or user-controlled text may be placed into innerHTML','I found an innerHTML assignment whose value appears to come from input, a URL, a response, or a message without an obvious escaping or sanitizing step. This stays review-only because the value may still be safe.','Potentially dynamic innerHTML assignment without an obvious sanitizer detected.',name,lineOf(text,riskyInner[0].index),false);
 
   ran(ctx,'js.empty-catch');
   const emptyCatch=[...executable.matchAll(/catch\s*(?:\([^)]*\))?\s*\{\s*\}/g)];

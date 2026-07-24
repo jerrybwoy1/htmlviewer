@@ -626,6 +626,30 @@ async function toggleFullScreen(){
 function openMore(){$('moreModal').classList.remove('hidden')}
 function closeMore(){$('moreModal').classList.add('hidden')}
 
+function openNativePicker(kind='file'){
+  const input=kind==='folder'?$('folderInput'):$('fileInput');
+  if(!input){status('File picker is unavailable');notice('I could not find the browser file picker. Reload the page and try again.');return false}
+  input.value='';
+  status(kind==='folder'?'Choose a project folder…':'Choose a file or ZIP…');
+  try{
+    if(typeof input.showPicker==='function'){input.showPicker();return true}
+    input.click();
+    return true;
+  }catch{
+    try{input.click();return true}catch{
+      status('File picker did not open');
+      notice('The browser did not open its file picker. On iPhone, try the Choose file / ZIP button again or use Paste code.');
+      return false;
+    }
+  }
+}
+
+function handlePickedFiles(input){
+  const files=input?.files;
+  if(!files?.length){status('No file chosen');return}
+  loadProject(files).finally(()=>{try{input.value=''}catch{}});
+}
+
 window.addEventListener('message',e=>{
   if(e.source!==frame.contentWindow)return;
   const d=e.data||{};
@@ -641,10 +665,11 @@ window.addEventListener('message',e=>{
 
 ['dragenter','dragover'].forEach(v=>$('dropzone').addEventListener(v,e=>{e.preventDefault();$('dropzone').classList.add('drag')}));
 ['dragleave','drop'].forEach(v=>$('dropzone').addEventListener(v,e=>{e.preventDefault();$('dropzone').classList.remove('drag')}));
-$('dropzone').addEventListener('drop',e=>loadProject(e.dataTransfer.files));
-$('fileInput').onchange=e=>loadProject(e.target.files);
-$('folderInput').onchange=e=>loadProject(e.target.files);
-$('folderBtn').onclick=()=>$('folderInput').click();
+$('dropzone').addEventListener('drop',e=>{const files=e.dataTransfer?.files;if(files?.length)loadProject(files)});
+$('fileInput').addEventListener('change',e=>handlePickedFiles(e.currentTarget));
+$('folderInput').addEventListener('change',e=>handlePickedFiles(e.currentTarget));
+$('fileInput').addEventListener('cancel',()=>status('No file chosen'));
+$('folderInput').addEventListener('cancel',()=>status('No folder chosen'));
 $('pasteInlineBtn').onclick=openPasteModal;
 $('emptyPasteBtn').onclick=openPasteModal;
 $('clearInlineBtn').onclick=()=>{closeMore();clearProject()};
@@ -673,6 +698,8 @@ $('actualBtn').onclick=()=>setFit('actual');
 $('desktopWidth').onchange=e=>{state.desktopWidth=Number(e.target.value)||1440;applyDevice()};
 document.querySelectorAll('.device-btn').forEach(b=>b.onclick=()=>setDevice(b.dataset.device));
 document.addEventListener('click',async e=>{
+  const picker=e.target.closest?.('[data-file-picker]');
+  if(picker){e.preventDefault();openNativePicker(picker.dataset.filePicker);return}
   const shotButton=e.target.closest?.('[data-shot-index]');
   if(shotButton){e.preventDefault();showScreenshot(Number(shotButton.dataset.shotIndex)||0);return}
   const actionButton=e.target.closest?.('[data-audit-action]');
