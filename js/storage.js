@@ -89,6 +89,5 @@ export const Storage={
     }catch{}
   },
   providerSettings(){const saved=this.load().providers||{groq:{enabled:false},google:{enabled:false}};let session={};try{session=JSON.parse(sessionStorage.getItem(this.sessionKey)||'{}')}catch{}return{groq:{enabled:!!saved.groq?.enabled,key:session.groq?.key||''},google:{enabled:!!saved.google?.enabled,key:session.google?.key||''}}},
-  saveProviders(providers){const s=this.load();this.save({...s,providers:{groq:{enabled:!!providers.groq?.enabled},google:{enabled:!!providers.google?.enabled}}});sessionStorage.setItem(this.sessionKey,JSON.stringify({groq:{key:providers.groq?.key||''},google:{key:providers.google?.key||''}}))},
-  clearProviderKeys(){sessionStorage.removeItem(this.sessionKey)}
+  saveProviders(providers){const s=this.load();this.save({...s,providers:{groq:{enabled:!!providers.groq?.enabled},google:{enabled:!!providers.google?.enabled}}});sessionStorage.setItem(this.sessionKey,JSON.stringify({groq:{key:providers.groq?.key||''},google:{key:providers.google?.key||''}}))}
 };

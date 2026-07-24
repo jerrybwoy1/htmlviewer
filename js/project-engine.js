@@ -1,4 +1,4 @@
-import {safeInlineScript,getScreenshotHelper,buildPreviewRuntime} from './preview-helper.js';
+import {safeInlineScript,buildPreviewRuntime} from './preview-helper.js';
 const MIME={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',jsx:'text/jsx',tsx:'text/tsx',ts:'text/typescript',json:'application/json',txt:'text/plain',md:'text/markdown',csv:'text/csv',xml:'application/xml',svg:'image/svg+xml',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',ico:'image/x-icon',pdf:'application/pdf',zip:'application/zip',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf'};
 const CODE_EXTS=['ts','tsx','js','jsx','mjs'];
 export const norm=p=>String(p||'').replaceAll('\\','/').replace(/^\.\//,'').replace(/^\//,'');
@@ -52,10 +52,14 @@ function splitSrcset(value){
   });
 }
 
+// For HTML attributes (src, href, srcset, css url()): any non-URL reference is local.
+// Bare paths like "js/app.js" and "images/logo.png" are valid — no leading dot required.
 function isLocalRef(ref){
   return !!ref&&!/^(data:|blob:|https?:|mailto:|tel:|javascript:|#|\/\/)/i.test(ref);
 }
 
+// For JS import specifiers only: a leading dot or slash marks a local path.
+// Bare names like 'react' or 'lucide-react' are npm packages routed through esm.sh.
 function isModuleLocalRef(ref){
   return !!ref&&!/^(data:|blob:|https?:|mailto:|tel:|javascript:|#|\/\/)/i.test(ref)&&/^(\.?\.?\/|\/)/.test(ref);
 }
@@ -67,6 +71,7 @@ function isBareRef(ref){
 function packageRoot(spec){if(spec.startsWith('@'))return spec.split('/').slice(0,2).join('/');return spec.split('/')[0]}
 function packageSubpath(spec){const root=packageRoot(spec);return spec.slice(root.length)}
 
+// btoa on large files crashes via spread; use a chunked approach instead.
 function bufToBase64(buf){
   const bytes=new Uint8Array(buf);
   let binary='';
@@ -77,11 +82,34 @@ function bufToBase64(buf){
   return btoa(binary);
 }
 
+function textToBase64(source){
+  const bytes=new TextEncoder().encode(String(source||''));
+  let binary='';
+  const chunk=8192;
+  for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+  return btoa(binary);
+}
+
+function childModuleLauncher(source){
+  const payload=textToBase64(source);
+  // The large compiled module is stored only as Base64 text in the HTML. The
+  // executable Blob is created by the sandboxed child itself, so it belongs to
+  // the child's origin and does not cross the parent/iframe Blob boundary.
+  return `{
+    const __b64=${JSON.stringify(payload)};
+    const __bin=atob(__b64);
+    const __bytes=new Uint8Array(__bin.length);
+    for(let __i=0;__i<__bin.length;__i++)__bytes[__i]=__bin.charCodeAt(__i);
+    const __url=URL.createObjectURL(new Blob([__bytes],{type:'text/javascript'}));
+    import(__url).finally(()=>setTimeout(()=>URL.revokeObjectURL(__url),1000));
+  }`;
+}
+
 export class ProjectRuntime{
   constructor(){
     this.files=new Map();
-    this.urls=new Map();
-    this.bundleCache=new Map();
+    this.urls=new Map();        // data: URIs for assets; render: blob for the HTML wrapper
+    this.bundleCache=new Map(); // entry path -> compiled inline module bundle
     this.packageVersions={};
     this.compileErrors=[];
   }
@@ -131,7 +159,9 @@ export class ProjectRuntime{
 
   findReactEntry(){
     const names=[...this.files.keys()];
-    const candidates=['src/main.tsx','src/main.jsx','src/main.ts','src/main.js','src/index.tsx','src/index.jsx','src/index.ts','src/index.js','src/App.tsx','src/App.jsx','main.tsx','main.jsx','index.tsx','index.jsx'];
+    const candidates=['src/main.tsx','src/main.jsx','src/main.ts','src/main.js',
+      'src/index.tsx','src/index.jsx','src/index.ts','src/index.js',
+      'src/App.tsx','src/App.jsx','main.tsx','main.jsx','index.tsx','index.jsx'];
     return candidates.find(c=>names.includes(c))||names.find(n=>/\.(tsx|jsx)$/i.test(n))||null;
   }
 
@@ -172,6 +202,9 @@ ${tw}
     return candidates.find(x=>this.files.has(x))||resolved;
   }
 
+  // Converts a local file to a base64 data URI so it crosses the sandbox boundary.
+  // blob: URLs created in the parent page cannot be loaded by a sandboxed iframe
+  // that lacks allow-same-origin. Uses chunked btoa to avoid stack overflow on large files.
   async dataUrl(path){
     path=norm(cleanRef(path));
     if(this.urls.has(path))return this.urls.get(path);
@@ -185,6 +218,9 @@ ${tw}
     return u;
   }
 
+  // objectUrl is only used for the HTML render wrapper (loaded by the parent, not the
+  // sandboxed child) and for standalone image/PDF preview via srcdoc/frame.src where
+  // the parent origin applies and blob: is safe.
   objectUrl(path){
     path=norm(cleanRef(path));
     if(this.urls.has(path))return this.urls.get(path);
@@ -195,6 +231,9 @@ ${tw}
     return u;
   }
 
+  // Builds an esm.sh URL for a bare npm package specifier.
+  // Only react/react-dom get ?dev with no extra flags; all other packages get ?dev only
+  // (without external=react,react-dom which breaks packages that don't depend on React).
   externalUrl(spec){
     const root=packageRoot(spec),sub=packageSubpath(spec);
     const version=String(this.packageVersions[root]||'').replace(/^[~^<>= ]+/,'');
@@ -220,6 +259,8 @@ ${tw}
     return presets;
   }
 
+  // Uses Babel's parser/AST rather than regex so import-looking text inside strings
+  // and comments is never treated as a dependency.
   collectSpecs(source,path='module.js'){
     if(typeof Babel==='undefined')throw new Error('The built-in JavaScript/TypeScript parser did not load.');
     const specs=[];
@@ -350,11 +391,11 @@ ${tw}
     seen.add(base);
     css=css.replace(/@import\s+["']tailwindcss["']\s*;?/gi,'');
     css=css.replace(/@import\s+["']tailwindcss\/[^'"]*["']\s*;?/gi,'');
-    for(const m of [...css.matchAll(/@import\s+(?:url\()?["']?([^'")\;\s]+)["']?\)?\s*;?/gi)]){
+    for(const m of [...css.matchAll(/@import\s+(?:url\()?['"]?([^'")\;\s]+)['"]?\)?\s*;?/gi)]){
       const p=this.findLocal(base,m[1]),f=this.files.get(p);
       if(f&&ext(p)==='css'){const imported=await this.cssRewrite(await f.text(),p,seen);css=css.replace(m[0],`\n${imported}\n`)}
     }
-    for(const m of [...css.matchAll(/url\((["']?)([^'"]+)\1\)/g)]){
+    for(const m of [...css.matchAll(/url\((['"]?)([^'"]+)\1\)/g)]){
       const ref=m[2].trim();
       if(!isLocalRef(ref))continue;
       const u=await this.dataUrl(this.findLocal(base,ref));
@@ -366,7 +407,8 @@ ${tw}
   async injectProjectCss(d,alreadyInlined=new Set()){
     const cssFiles=[...this.files.keys()].filter(n=>ext(n)==='css'&&!alreadyInlined.has(n));
     if(!cssFiles.length)return;
-    const usesTailwind=cssFiles.some(n=>n.toLowerCase().includes('tailwind'))||Object.keys(this.packageVersions).some(k=>k==='tailwindcss'||k.startsWith('@tailwindcss/'));
+    const usesTailwind=cssFiles.some(n=>n.toLowerCase().includes('tailwind'))||
+      Object.keys(this.packageVersions).some(k=>k==='tailwindcss'||k.startsWith('@tailwindcss/'));
     if(usesTailwind&&!d.querySelector('script[data-debooger-helper="tailwind"]')){
       const tw=d.createElement('script');
       tw.src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.14';
@@ -385,11 +427,15 @@ ${tw}
   async htmlRewrite(src,base,inject=''){
     const d=new DOMParser().parseFromString(src,'text/html');
 
+    // Uploaded CSP meta rules can block the isolated preview helpers and rewritten
+    // local scripts. The preview is already sandboxed, so remove only document-level
+    // CSP meta tags inside the temporary reconstruction.
     d.querySelectorAll('meta[http-equiv]').forEach(m=>{
       const v=(m.getAttribute('http-equiv')||'').toLowerCase();
       if(v==='content-security-policy'||v==='content-security-policy-report-only')m.remove();
     });
 
+    // Inline linked stylesheets; track handled files to prevent double-injection.
     const inlinedCss=new Set();
     for(const l of [...d.querySelectorAll('link[rel="stylesheet"][href]')]){
       const p=this.findLocal(base,l.getAttribute('href')),f=this.files.get(p);
@@ -405,6 +451,8 @@ ${tw}
       if(u)l.setAttribute('href',u);
     }
 
+    // Images, video, audio — exclude <script> which is handled separately below.
+    // data: URIs are used so assets cross the sandbox boundary (blob: cannot).
     for(const el of [...d.querySelectorAll('[src],[poster]')].filter(el=>el.tagName!=='SCRIPT')){
       for(const a of ['src','poster']){
         const r=el.getAttribute(a);
@@ -423,8 +471,12 @@ ${tw}
       if(next.length)el.setAttribute('srcset',next.join(', '));
     }
 
-    for(const el of [...d.querySelectorAll('[style]')])el.setAttribute('style',await this.cssRewrite(el.getAttribute('style'),base));
+    for(const el of [...d.querySelectorAll('[style]')])
+      el.setAttribute('style',await this.cssRewrite(el.getAttribute('style'),base));
 
+    // Scripts:
+    // - type="module": compile the local graph into one inline registry bundle.
+    // - Classic scripts: inline source so the sandbox never has to fetch local files.
     for(const s of [...d.querySelectorAll('script[src]')]){
       const raw=s.getAttribute('src');
       if(!isLocalRef(raw))continue;
@@ -436,7 +488,10 @@ ${tw}
         const ns=d.createElement('script');
         ns.setAttribute('type','module');
         ns.setAttribute('data-debooger-source',p);
-        ns.textContent=safeInlineScript(bundle);
+        // Keep the large payload as Base64-only inline text and create the executable
+        // Blob inside the iframe. This avoids both Safari data-URL limits and the
+        // parent-created Blob restriction of a sandbox without allow-same-origin.
+        ns.textContent=childModuleLauncher(bundle);
         s.replaceWith(ns);
         continue;
       }
@@ -449,12 +504,10 @@ ${tw}
       s.replaceWith(ns);
     }
 
-    const captureLib=d.createElement('script');
-    captureLib.setAttribute('data-debooger-helper','screenshot');
-    const helperSource=await getScreenshotHelper();
-    if(helperSource)captureLib.textContent=safeInlineScript(helperSource);
-    else captureLib.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-    d.body.appendChild(captureLib);
+    const capture=d.createElement('script');
+    capture.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    capture.setAttribute('data-debooger-helper','screenshot');
+    d.body.appendChild(capture);
 
     const origin=typeof location!=='undefined'?location.origin:'*';
     const nav=d.createElement('script');
