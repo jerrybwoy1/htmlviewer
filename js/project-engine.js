@@ -1,3 +1,4 @@
+import {safeInlineScript,getScreenshotHelper,buildPreviewRuntime} from './preview-helper.js';
 const MIME={html:'text/html',htm:'text/html',css:'text/css',js:'text/javascript',mjs:'text/javascript',jsx:'text/jsx',tsx:'text/tsx',ts:'text/typescript',json:'application/json',txt:'text/plain',md:'text/markdown',csv:'text/csv',xml:'application/xml',svg:'image/svg+xml',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',ico:'image/x-icon',pdf:'application/pdf',zip:'application/zip',woff:'font/woff',woff2:'font/woff2',ttf:'font/ttf',otf:'font/otf'};
 const CODE_EXTS=['ts','tsx','js','jsx','mjs'];
 export const norm=p=>String(p||'').replaceAll('\\','/').replace(/^\.\//,'').replace(/^\//,'');
@@ -130,9 +131,7 @@ export class ProjectRuntime{
 
   findReactEntry(){
     const names=[...this.files.keys()];
-    const candidates=['src/main.tsx','src/main.jsx','src/main.ts','src/main.js',
-      'src/index.tsx','src/index.jsx','src/index.ts','src/index.js',
-      'src/App.tsx','src/App.jsx','main.tsx','main.jsx','index.tsx','index.jsx'];
+    const candidates=['src/main.tsx','src/main.jsx','src/main.ts','src/main.js','src/index.tsx','src/index.jsx','src/index.ts','src/index.js','src/App.tsx','src/App.jsx','main.tsx','main.jsx','index.tsx','index.jsx'];
     return candidates.find(c=>names.includes(c))||names.find(n=>/\.(tsx|jsx)$/i.test(n))||null;
   }
 
@@ -351,11 +350,11 @@ ${tw}
     seen.add(base);
     css=css.replace(/@import\s+["']tailwindcss["']\s*;?/gi,'');
     css=css.replace(/@import\s+["']tailwindcss\/[^'"]*["']\s*;?/gi,'');
-    for(const m of [...css.matchAll(/@import\s+(?:url\()?['"]?([^'")\;\s]+)['"]?\)?\s*;?/gi)]){
+    for(const m of [...css.matchAll(/@import\s+(?:url\()?["']?([^'")\;\s]+)["']?\)?\s*;?/gi)]){
       const p=this.findLocal(base,m[1]),f=this.files.get(p);
       if(f&&ext(p)==='css'){const imported=await this.cssRewrite(await f.text(),p,seen);css=css.replace(m[0],`\n${imported}\n`)}
     }
-    for(const m of [...css.matchAll(/url\((['"]?)([^'"]+)\1\)/g)]){
+    for(const m of [...css.matchAll(/url\((["']?)([^'"]+)\1\)/g)]){
       const ref=m[2].trim();
       if(!isLocalRef(ref))continue;
       const u=await this.dataUrl(this.findLocal(base,ref));
@@ -367,8 +366,7 @@ ${tw}
   async injectProjectCss(d,alreadyInlined=new Set()){
     const cssFiles=[...this.files.keys()].filter(n=>ext(n)==='css'&&!alreadyInlined.has(n));
     if(!cssFiles.length)return;
-    const usesTailwind=cssFiles.some(n=>n.toLowerCase().includes('tailwind'))||
-      Object.keys(this.packageVersions).some(k=>k==='tailwindcss'||k.startsWith('@tailwindcss/'));
+    const usesTailwind=cssFiles.some(n=>n.toLowerCase().includes('tailwind'))||Object.keys(this.packageVersions).some(k=>k==='tailwindcss'||k.startsWith('@tailwindcss/'));
     if(usesTailwind&&!d.querySelector('script[data-debooger-helper="tailwind"]')){
       const tw=d.createElement('script');
       tw.src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.14';
@@ -386,6 +384,11 @@ ${tw}
 
   async htmlRewrite(src,base,inject=''){
     const d=new DOMParser().parseFromString(src,'text/html');
+
+    d.querySelectorAll('meta[http-equiv]').forEach(m=>{
+      const v=(m.getAttribute('http-equiv')||'').toLowerCase();
+      if(v==='content-security-policy'||v==='content-security-policy-report-only')m.remove();
+    });
 
     const inlinedCss=new Set();
     for(const l of [...d.querySelectorAll('link[rel="stylesheet"][href]')]){
@@ -420,8 +423,7 @@ ${tw}
       if(next.length)el.setAttribute('srcset',next.join(', '));
     }
 
-    for(const el of [...d.querySelectorAll('[style]')])
-      el.setAttribute('style',await this.cssRewrite(el.getAttribute('style'),base));
+    for(const el of [...d.querySelectorAll('[style]')])el.setAttribute('style',await this.cssRewrite(el.getAttribute('style'),base));
 
     for(const s of [...d.querySelectorAll('script[src]')]){
       const raw=s.getAttribute('src');
@@ -434,27 +436,29 @@ ${tw}
         const ns=d.createElement('script');
         ns.setAttribute('type','module');
         ns.setAttribute('data-debooger-source',p);
-        ns.textContent=bundle;
+        ns.textContent=safeInlineScript(bundle);
         s.replaceWith(ns);
         continue;
       }
       const ns=d.createElement('script');
       let text=await f.text();
       if(['ts','tsx','jsx'].includes(ext(p)))try{text=this.transpile(text,p)}catch{}
-      ns.textContent=text;
+      ns.textContent=safeInlineScript(text);
       for(const a of [...s.attributes])if(a.name!=='src')ns.setAttribute(a.name,a.value);
       ns.setAttribute('data-debooger-source',p);
       s.replaceWith(ns);
     }
 
     const captureLib=d.createElement('script');
-    captureLib.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
     captureLib.setAttribute('data-debooger-helper','screenshot');
+    const helperSource=await getScreenshotHelper();
+    if(helperSource)captureLib.textContent=safeInlineScript(helperSource);
+    else captureLib.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
     d.body.appendChild(captureLib);
 
     const origin=typeof location!=='undefined'?location.origin:'*';
     const nav=d.createElement('script');
-    nav.textContent=`(()=>{const base=${JSON.stringify(base)};const origin=${JSON.stringify(origin)};const sleep=ms=>new Promise(r=>setTimeout(r,ms));function pageScore(){const text=(document.body?.innerText||'').trim().length;const visible=[...document.querySelectorAll('body *')].filter(el=>{const s=getComputedStyle(el);const r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>2&&r.height>2}).length;return{text,visible,width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}async function shot(label){try{for(let i=0;i<50&&!window.html2canvas;i++)await sleep(100);if(!window.html2canvas)throw new Error('Screenshot helper did not load');const score=pageScore();if(score.text<8&&score.visible<5)throw new Error('The rendered page is too empty to count as a real screenshot');const root=document.documentElement,w=Math.min(Math.max(root.scrollWidth,document.body?.scrollWidth||0),2200),h=Math.min(Math.max(root.scrollHeight,document.body?.scrollHeight||0),4200);const canvas=await window.html2canvas(document.body,{backgroundColor:'#ffffff',useCORS:true,logging:false,scale:.65,width:w,height:h,windowWidth:w,windowHeight:h});const data=canvas.toDataURL('image/jpeg',.82);if(data.length<5000)throw new Error('The screenshot was too small to prove the page rendered correctly');parent.postMessage({type:'debooger-screenshot',label,data,score},origin);return true}catch(err){parent.postMessage({type:'debooger-screenshot-error',message:String(err?.message||err)},origin);return false}}document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a)return;const h=a.getAttribute('href')||'';if(h&&!/^(https?:|mailto:|tel:|javascript:|#|\\/\\/)/i.test(h)){e.preventDefault();parent.postMessage({type:'debooger-nav',href:h,base},origin)}});window.addEventListener('error',e=>parent.postMessage({type:'debooger-runtime-error',message:e.message,line:e.lineno,col:e.colno},origin));window.addEventListener('unhandledrejection',e=>parent.postMessage({type:'debooger-runtime-error',message:'Promise rejection: '+String(e.reason?.message||e.reason||'unknown')},origin));window.addEventListener('load',()=>setTimeout(()=>parent.postMessage({type:'debooger-render-ready',score:pageScore()},origin),900));window.addEventListener('message',async e=>{if(e.data?.type==='debooger-capture'){await shot(e.data.label||document.title||'Page');parent.postMessage({type:'debooger-capture-finished'},origin)}if(e.data?.type==='debooger-capture-states'){const safe=/menu|more|filter|column|setting|option|view|detail|info|help|sort/i,danger=/delete|remove|send|call|dial|pay|purchase|submit|publish|export|save|message|email/i;const controls=[...document.querySelectorAll('button,[role="button"],[aria-haspopup]')].filter(el=>{const t=(el.innerText||el.getAttribute('aria-label')||'').trim();return t&&safe.test(t)&&!danger.test(t)&&!el.disabled}).slice(0,6);let made=0;for(const el of controls){const label=(el.innerText||el.getAttribute('aria-label')||'Control').trim().slice(0,60);try{el.click();await sleep(300);if(await shot(label+' open'))made++;if(el.getAttribute('aria-expanded')==='true')el.click();else{const close=[...document.querySelectorAll('button,[role="button"]')].find(x=>/^(close|cancel|done|x)$/i.test((x.innerText||x.getAttribute('aria-label')||'').trim()));if(close)close.click()}await sleep(150)}catch{}}parent.postMessage({type:'debooger-states-finished',count:made},origin)}})})();`;
+    nav.textContent=safeInlineScript(buildPreviewRuntime(base,origin));
     d.body.appendChild(nav);
 
     if(inject)d.head.insertAdjacentHTML('beforeend',inject);
