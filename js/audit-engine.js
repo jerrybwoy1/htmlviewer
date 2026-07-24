@@ -5,6 +5,12 @@ function finding(severity,title,plain,technical,file='',line=null){return{severi
 function lineOf(text,index){return text.slice(0,index).split('\n').length}
 function addUnique(out,item){const key=`${item.file}|${item.line||''}|${item.title}`;if(!out.some(x=>`${x.file}|${x.line||''}|${x.title}`===key))out.push(item)}
 
+// Extract comment tokens from source. The previous version filtered with
+// /^\/\/g[imsuy]*\)/ which incorrectly discarded any comment starting with "//g"
+// (e.g. "// get all items"). The filter was trying to exclude regex closing tokens
+// but was anchored to the comment start, making it wrong. Removed entirely —
+// false positives from regex literals in comments are acceptable, and the risk of
+// a developer leaving a TODO or FIXME inside a regex comment is negligible.
 function commentsOnly(text){
   return [...text.matchAll(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g)].map(m=>({text:m[0],index:m.index}));
 }
@@ -27,7 +33,18 @@ export async function auditProject(files,meta,runtimeErrors=[],compileErrors=[])
   }
   auditProjectLinks(files,texts,findings,good);
   auditCrossFileIds(texts,findings);
-  runtimeErrors.forEach(x=>addUnique(findings,finding('error','The page hit a running error','Something on the page failed while it was actually running. That can make a button, screen, or background task stop working.',`${x.message||'Runtime error'} at ${x.line||'?'}:${x.col||'?'}`,'runtime',x.line||null)));
+  runtimeErrors.forEach(x=>{
+    const startPage=meta.pages?.find(p=>/(^|\/)index\.html?$/i.test(p))||meta.pages?.[0]||null;
+    const exact=String(x.message||'Unknown JavaScript runtime error');
+    const source=x.file||x.filename||startPage||'running page';
+    const where=[x.line||null,x.col||null].filter(v=>v!=null&&v!=='').join(':');
+    const title=startPage?`${startPage} was found, but JavaScript failed while the page was running`:'The page started, but JavaScript failed while it was running';
+    const plain=startPage
+      ?`The starting page ${startPage} exists and was opened successfully. The failure happened after the page started running, so this is not a missing index-file problem. The browser reported: “${exact}”${where?` at ${where}`:''}. A script, button, screen, or background task that depends on this code may stop working.`
+      :`The page was opened, but JavaScript failed after it started running. The browser reported: “${exact}”${where?` at ${where}`:''}. This can stop controls, screens, or background tasks that depend on the failed code.`;
+    const technical=`Stage: runtime execution\nStarting page: ${startPage||'not identified'}\nReported source: ${source}\nExact browser error: ${exact}\nLocation: ${where||'not provided by browser'}\nWhat to fix: trace this exact JavaScript error in the reported source; do not treat it as a missing page unless the starting file itself is actually absent.`;
+    addUnique(findings,finding('error',title,plain,technical,source,x.line||null));
+  });
   (compileErrors||[]).forEach(x=>addUnique(findings,finding('error','A file could not be compiled','One of the source files could not be converted to code the browser understands. The preview may be blank or broken.',x.message||'Compile error',x.file||'unknown')));
   if(!runtimeErrors.length)good.push('No browser runtime crashes were captured during this preview.');
   if(meta.pageCount>0)good.push(`Found ${meta.pageCount} page${meta.pageCount===1?'':'s'} that can be reconstructed for preview.`);
@@ -127,5 +144,5 @@ export function compareAudits(previous,current){
   let recommendation='The new version is the better starting point.';
   if(delta<-5||added.length>fixed.length+3)recommendation='The previous version looks safer. Start from the previous version and reapply the new changes more carefully.';
   else if(Math.abs(delta)<=3)recommendation='The versions are close. Keep the one with the features and design you prefer, then fix the remaining issues.';
-  return{delta,fixedCount:fixed.length,newIssueCount:added.length,recommendation,previousScore:previous.score,currentScore:current.score};
+  return{delta,fixedCount:fixed.length,newIssueCount:added.length,previousScore:previous.score,currentScore:current.score,recommendation};
 }
