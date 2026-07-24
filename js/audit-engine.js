@@ -5,12 +5,6 @@ function finding(severity,title,plain,technical,file='',line=null){return{severi
 function lineOf(text,index){return text.slice(0,index).split('\n').length}
 function addUnique(out,item){const key=`${item.file}|${item.line||''}|${item.title}`;if(!out.some(x=>`${x.file}|${x.line||''}|${x.title}`===key))out.push(item)}
 
-// Extract comment tokens from source. The previous version filtered with
-// /^\/\/g[imsuy]*\)/ which incorrectly discarded any comment starting with "//g"
-// (e.g. "// get all items"). The filter was trying to exclude regex closing tokens
-// but was anchored to the comment start, making it wrong. Removed entirely —
-// false positives from regex literals in comments are acceptable, and the risk of
-// a developer leaving a TODO or FIXME inside a regex comment is negligible.
 function commentsOnly(text){
   return [...text.matchAll(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g)].map(m=>({text:m[0],index:m.index}));
 }
@@ -58,7 +52,7 @@ function auditHtml(name,text,out,good){
   const ids={};
   for(const m of text.matchAll(/\bid\s*=\s*["']([^"']+)["']/gi)){ids[m[1]]=(ids[m[1]]||[]).concat(lineOf(text,m.index))}
   Object.entries(ids).forEach(([id,lines])=>{if(lines.length>1)addUnique(out,finding('error','The same page ID is used more than once',`More than one part of this page is called "${id}". That can make a button or style target the wrong thing.`,`Duplicate id="${id}" on lines ${lines.join(', ')}`,name,lines[0]))});
-  const imgs=[...text.matchAll(/<img\b[^>]*>/gi)],missing=imgs.filter(m=>!/^.*\balt\s*=/.test(m[0]));
+  const imgs=[...text.matchAll(/<img\b[^>]*>/gi)],missing=imgs.filter(m=>! /\balt\s*=/.test(m[0]));
   if(missing.length)addUnique(out,finding('warning','Some images are missing descriptions',`${missing.length} image${missing.length===1?' is':'s are'} missing an alt description.`,`Missing alt attributes: ${missing.length}`,name,lineOf(text,missing[0].index)));
   else if(imgs.length)good.push(`${name}: image descriptions are present.`);
   if(/<font\b|<center\b|<marquee\b|<frameset\b/i.test(text))addUnique(out,finding('warning','Old HTML is still being used','This page uses older browser tags. Modern code is easier to maintain and less likely to behave differently between browsers.','Deprecated HTML tags detected.',name));
@@ -135,7 +129,10 @@ function auditCrossFileIds(texts,out){
 }
 
 export function compareAudits(previous,current){
-  if(!previous)return null;
+  if(!previous||!current)return null;
+  const previousKey=previous.meta?.projectKey||'';
+  const currentKey=current.meta?.projectKey||'';
+  if(!previousKey||!currentKey||previousKey!==currentKey)return null;
   const delta=current.score-previous.score;
   const prevKeys=new Set(previous.findings.map(f=>`${f.file}|${f.title}|${f.line||''}`));
   const curKeys=new Set(current.findings.map(f=>`${f.file}|${f.title}|${f.line||''}`));
@@ -144,5 +141,5 @@ export function compareAudits(previous,current){
   let recommendation='The new version is the better starting point.';
   if(delta<-5||added.length>fixed.length+3)recommendation='The previous version looks safer. Start from the previous version and reapply the new changes more carefully.';
   else if(Math.abs(delta)<=3)recommendation='The versions are close. Keep the one with the features and design you prefer, then fix the remaining issues.';
-  return{delta,fixedCount:fixed.length,newIssueCount:added.length,previousScore:previous.score,currentScore:current.score,recommendation};
+  return{delta,fixedCount:fixed.length,newIssueCount:added.length,recommendation,previousScore:previous.score,currentScore:current.score};
 }
