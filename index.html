@@ -21,7 +21,6 @@
     <button class="btn desktop-only" id="pasteBtn">Paste</button>
     <button class="btn desktop-only" id="clearBtn">Clear</button>
     <button class="btn" id="fullBtn">Full screen</button>
-    <button class="btn primary" id="openBtn">Open</button>
     <button class="btn mobile-only" id="moreBtn" aria-label="More options">•••</button>
   </header>
   <div class="workspace">
@@ -49,15 +48,14 @@
       <div class="card"><div class="card-h">Audit</div><div class="card-b"><div id="scoreBox"><div class="score">—</div><div class="small">Open a project to begin.</div></div><div class="tiny-gap"></div><div id="metrics" class="metric-grid"></div></div></div>
       <div id="compareBox" class="hidden"></div>
       <div class="card"><div class="card-h">What needs attention</div><div class="card-b" id="findings"><div class="small">Problems will be explained here in simple English. Tap one for the detailed reason.</div></div></div>
+      <div class="card"><div class="card-h"><span>Button and control tests</span><span class="small" id="controlCount">0</span></div><div class="card-b" id="controlList"><div class="small">Safe controls will be tested automatically with before and after screenshots.</div></div></div>
       <div class="card"><div class="card-h"><span>Real screenshots</span><span class="small" id="shotCount">0</span></div><div class="card-b"><div id="gallery" class="gallery"><div class="small">Screenshots will appear automatically during the audit.</div></div></div></div>
-      <div class="action-grid"><button class="btn" id="auditBtn">Audit again</button><button class="btn" id="copyBtn">Copy</button><button class="btn" id="downloadBtn">Download report</button></div>
+      <div class="action-grid"><button class="btn" id="auditBtn" data-audit-action="audit">Audit again</button><button class="btn" id="copyBtn" data-audit-action="copy">Copy</button><button class="btn" id="downloadBtn" data-audit-action="download">Download report</button></div>
     </aside>
   </div>
 </div>
-<div class="mobile-results-bar" id="mobileResultsBar"><button class="btn full" id="openResultsBtn">Results & screenshots</button></div>
 <input id="folderInput" class="file-input" type="file" webkitdirectory directory multiple aria-label="Choose project folder">
 <div class="modal hidden" id="moreModal" role="dialog" aria-modal="true" aria-labelledby="moreTitle"><div class="modal-card compact-modal"><div class="modal-head"><strong id="moreTitle">More</strong><button class="btn" id="closeMoreBtn">Close</button></div><div class="more-actions"><button class="btn full" id="pasteInlineBtn">Paste</button><button class="btn full" id="folderBtn">Open a folder</button><button class="btn full" id="clearInlineBtn">Clear current project</button></div></div></div>
-<div class="modal hidden" id="resultsModal" role="dialog" aria-modal="true" aria-labelledby="resultsTitle"><div class="modal-card results-card"><div class="modal-head"><strong id="resultsTitle">Results & screenshots</strong><button class="btn" id="closeResultsBtn">Close</button></div><div id="mobileResultsHost"></div></div></div>
 <div class="modal hidden" id="pasteModal" role="dialog" aria-modal="true" aria-labelledby="pasteTitle"><div class="modal-card paste-card"><div class="modal-head"><strong id="pasteTitle">Paste into debooger2000</strong><button class="btn" id="closePasteBtn">Close</button></div><div class="paste-tabs"><button class="paste-tab active" data-paste="text">Code / text</button><button class="paste-tab" data-paste="link">Link</button></div><div id="pasteTextPanel"><textarea id="pasteText" class="field paste-area" aria-label="Pasted code or text" placeholder="Paste HTML, CSS, JavaScript, JSON, or text here..."></textarea><div class="paste-row"><select id="pasteType" class="field" aria-label="Pasted content type"><option value="html">HTML</option><option value="css">CSS</option><option value="js">JavaScript</option><option value="json">JSON</option><option value="txt">Text</option></select><button class="btn primary" id="openPasteTextBtn">Open temporary preview</button></div></div><div id="pasteLinkPanel" class="hidden"><input id="pasteLink" class="field" type="url" aria-label="Direct file or ZIP link" inputmode="url" placeholder="Paste a direct file or ZIP link"><div class="small provider-note">Some AI download links only work inside the app that made them. I will tell you if the link cannot be opened.</div><button class="btn primary full" id="openPasteLinkBtn">Open link temporarily</button></div></div></div>
 <div class="modal hidden" id="shotModal" role="dialog" aria-modal="true" aria-labelledby="shotTitle"><div class="modal-card shot-card"><div class="modal-head"><strong id="shotTitle">Screenshot</strong><button class="btn" id="closeShotBtn">Close</button></div><img id="shotImage" alt="Captured app screen"></div></div>
 <script type="module" src="js/app.js"></script>
