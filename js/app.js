@@ -6,7 +6,7 @@ import {loadProviderSettings,saveProviderSettings,providerSummary} from './provi
 
 const $=id=>document.getElementById(id);
 const runtime=new ProjectRuntime();
-const state={current:null,mode:'desktop',adapt:false,scale:1,runtimeErrors:[],audit:null,compare:null,fitMode:'width',desktopWidth:1440,shots:[],controlTests:[],captureWaiters:new Map(),renderScore:null};
+const state={current:null,mode:'desktop',adapt:false,scale:1,runtimeErrors:[],audit:null,compare:null,fitMode:'width',desktopWidth:1440,shots:[],controlTests:[],captureErrors:[],captureWaiters:new Map(),renderScore:null,captureAttempted:false,captureCompleted:false,controlsAttempted:false,controlsCompleted:false,controlsFound:0};
 const frame=$('frame'),stage=$('desktopStage'),wrap=$('stageWrap'),shell=$('viewerShell'),main=document.querySelector('.main'),auditRail=$('auditRail');
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
@@ -113,7 +113,7 @@ function waitFor(type,timeout=10000){
 async function loadProject(list,{skipConfirm=false}={}){
   if(!list?.length)return;
   if(runtime.files.size&&!skipConfirm&&!confirm('Replace the current temporary project? The older audit will stay in history for comparison.'))return;
-  status('Opening…');notice('');state.runtimeErrors=[];state.audit=null;state.compare=null;state.current=null;state.shots=[];state.controlTests=[];state.renderScore=null;renderGallery();renderControlTests();
+  status('Opening…');notice('');state.runtimeErrors=[];state.audit=null;state.compare=null;state.current=null;state.shots=[];state.controlTests=[];state.captureErrors=[];state.renderScore=null;state.captureAttempted=false;state.captureCompleted=false;state.controlsAttempted=false;state.controlsCompleted=false;state.controlsFound=0;renderGallery();renderControlTests();
   try{
     await runtime.addFiles(list);
     refreshFiles();
@@ -198,20 +198,26 @@ function setFit(mode){state.fitMode=mode;applyFit()}
 async function captureCurrent(label){
   const isSynth=state.current==='__synthesized_react__';
   if(!state.current||(!/\.html?$/i.test(state.current)&&!isSynth))return false;
+  state.captureAttempted=true;
   const waiting=waitFor('debooger-capture-finished',16000);
-  frame.contentWindow?.postMessage({type:'debooger-capture',label},location.origin);
-  return waiting;
+  frame.contentWindow?.postMessage({type:'debooger-capture',label},'*');
+  const result=await waiting;
+  if(result)state.captureCompleted=true;
+  return result;
 }
 async function testCurrentControls(){
   const isSynth=state.current==='__synthesized_react__';
   if(!state.current||(!/\.html?$/i.test(state.current)&&!isSynth))return false;
+  state.controlsAttempted=true;
   const waiting=waitFor('debooger-controls-finished',45000);
-  frame.contentWindow?.postMessage({type:'debooger-test-controls'},location.origin);
-  return waiting;
+  frame.contentWindow?.postMessage({type:'debooger-test-controls'},'*');
+  const result=await waiting;
+  if(result){state.controlsCompleted=true;state.controlsFound=Number(result.count||0)}
+  return result;
 }
 
 async function captureAuditScreens(){
-  state.shots=[];state.controlTests=[];renderGallery();renderControlTests();
+  state.shots=[];state.controlTests=[];state.captureErrors=[];state.captureAttempted=false;state.captureCompleted=false;state.controlsAttempted=false;state.controlsCompleted=false;state.controlsFound=0;renderGallery();renderControlTests();
   let pages=[...runtime.files.keys()].filter(n=>/\.html?$/i.test(n));
   if(!pages.length&&runtime.isReactSourceProject())pages=['__synthesized_react__'];
   if(!pages.length)return 0;
@@ -220,10 +226,7 @@ async function captureAuditScreens(){
     await select(pages[i]);
     status(`Photographing ${i+1}/${pages.length}…`);
     await captureCurrent(pages[i]);
-    if(i===0){
-      status('Testing safe buttons…');
-      await testCurrentControls();
-    }
+    if(i===0){status('Testing safe buttons…');await testCurrentControls()}
   }
   const validStart=start&&(runtime.files.has(start)||start==='__synthesized_react__');
   if(validStart)await select(start);
@@ -231,27 +234,34 @@ async function captureAuditScreens(){
 }
 
 function renderLooksReal(){const s=state.renderScore;return !!s&&(s.text>=20||s.visible>=8)&&s.width>20&&s.height>20}
+function finalizeAuditScore(audit){
+  audit.sourceScore=audit.score;
+  audit.visualComplete=state.captureCompleted&&state.shots.length>0;
+  audit.controlsComplete=!state.controlsAttempted||state.controlsCompleted;
+  audit.controlsFound=state.controlsFound;
+  if(!audit.visualComplete){audit.score=Math.min(audit.score,89);audit.verdict='Visual test incomplete'}
+  if(state.controlsAttempted&&!state.controlsCompleted){audit.score=Math.min(audit.score,84);audit.verdict='Runtime test incomplete'}
+  return audit;
+}
 
 async function runAudit(){
   if(!runtime.files.size)return;
   status('Checking everything…');
   const meta=classify(runtime.files);
-  meta.projectKey=await projectIdentity(meta);
-  meta.projectLabel=projectLabel(meta);
+  meta.projectKey=await projectIdentity(meta);meta.projectLabel=projectLabel(meta);
   const previous=Storage.history().find(x=>x.meta?.projectKey===meta.projectKey)||null;
   const audit=await auditProject(runtime.files,meta,state.runtimeErrors,runtime.compileErrors);
-  state.audit=audit;state.compare=compareAudits(previous,audit);renderAudit();
+  state.audit=audit;state.compare=null;renderAudit();
   let shotCount=0;
   const isReact=['Vite web application','React/Node application','React-style source project'].includes(meta.type);
   if(renderLooksReal()||!isReact||runtime.isReactSourceProject())shotCount=await captureAuditScreens();
-  audit.screenshotCount=shotCount;audit.visualComplete=shotCount>0;
+  audit.screenshotCount=shotCount;finalizeAuditScore(audit);state.compare=compareAudits(previous,audit);
   status('Saving audit…');
   await Storage.saveSnapshot(audit,runtime.files);
-  const history=Storage.pushAudit(audit);
-  await Storage.pruneSnapshots(history.slice(0,6).map(x=>x.snapshotId));
-  renderHistory();
-  if(shotCount){status('Audit complete');notice('')}
-  else{status('Code checked • visual test incomplete');notice('The page files were checked, but screenshot capture did not complete. Open the audit details for the exact render or runtime error instead of treating this as a missing starting page.')}
+  const history=Storage.pushAudit(audit);await Storage.pruneSnapshots(history.slice(0,6).map(x=>x.snapshotId));renderHistory();
+  if(audit.visualComplete&&audit.controlsComplete){status('Audit complete');notice('')}
+  else if(!audit.visualComplete){status('Code checked • visual test incomplete');const last=state.captureErrors.at(-1);notice(last?`Screenshot capture failed: ${last.message}`:'The source checks finished, but the preview did not return a screenshot result. The overall score is capped until a real rendered screenshot is captured.')}
+  else{status('Visual check complete • control test incomplete');notice('The page rendered and screenshots worked, but the safe-control test did not finish. The overall score is capped until runtime interaction testing completes.')}
   renderAudit();
 }
 
@@ -260,47 +270,25 @@ function renderAudit(){
   const cls=a.score>=90?'good':a.score>=70?'warn':'bad';
   $('scoreBox').innerHTML=`<div class="score ${cls}">${a.score}</div><div class="small">${esc(a.verdict)}${a.screenshotCount!=null?` • ${a.screenshotCount} screenshot${a.screenshotCount===1?'':'s'}`:''}</div>`;
   $('metrics').innerHTML=`<div class="metric"><b>${a.meta.fileCount}</b><span>Files checked</span></div><div class="metric"><b>${a.findings.length}</b><span>Things to review</span></div><div class="metric"><b>${a.good.length}</b><span>Good checks</span></div><div class="metric"><b>${a.meta.pageCount}</b><span>Page files</span></div>`;
-  const LIMIT=30;const top=a.findings.slice(0,LIMIT);const hidden=a.findings.length-top.length;
-  $('findings').innerHTML=(top.length
-    ?top.map(f=>`<details class="finding ${f.severity==='critical'||f.severity==='error'?'bad':f.severity==='warning'?'warn':'good'}"><summary><strong>${esc(f.title)}</strong><div class="simple-line">${esc(f.plain)}</div></summary><p>${f.file?`File: ${esc(f.file)}${f.line?` • line ${f.line}`:''}<br>`:''}${f.technical?`Developer detail: ${esc(f.technical)}`:'Tap only when you need the technical reason.'}</p></details>`).join('')
-    :'<div class="finding good"><summary><strong>No obvious source-code problems found</strong><div class="simple-line">The automatic code checks did not find a clear problem.</div></summary></div>')
-    +(hidden>0?`<div class="small" style="padding:8px 10px;color:var(--muted)">…and ${hidden} more item${hidden===1?'':'s'}. Download the report to see all.</div>`:'');
-  if(state.compare){
-    $('compareBox').classList.remove('hidden');
-    $('compareBox').innerHTML=`<details class="finding ${state.compare.delta>=0?'good':'warn'}"><summary><strong>${esc(state.compare.recommendation)}</strong><div class="simple-line">Tap to see the numbers behind this recommendation.</div></summary><p>Older score: ${state.compare.previousScore} • This score: ${state.compare.currentScore} • Fixed: ${state.compare.fixedCount} • New problems: ${state.compare.newIssueCount}</p></details>`;
-  } else $('compareBox').classList.add('hidden');
+  const LIMIT=30,top=a.findings.slice(0,LIMIT),hidden=a.findings.length-top.length;
+  $('findings').innerHTML=(top.length?top.map(f=>`<details class="finding ${f.severity==='critical'||f.severity==='error'?'bad':f.severity==='warning'?'warn':'good'}"><summary><strong>${esc(f.title)}</strong><div class="simple-line">${esc(f.plain)}</div></summary><p>${f.file?`File: ${esc(f.file)}${f.line?` • line ${f.line}`:''}<br>`:''}${f.technical?`Developer detail: ${esc(f.technical)}`:'Tap only when you need the technical reason.'}</p></details>`).join(''):'<div class="finding good"><summary><strong>No obvious source-code problems found</strong><div class="simple-line">The automatic code checks did not find a clear problem.</div></summary></div>')+(hidden>0?`<div class="small" style="padding:8px 10px;color:var(--muted)">…and ${hidden} more item${hidden===1?'':'s'}. Download the report to see all.</div>`:'');
+  if(state.compare){$('compareBox').classList.remove('hidden');$('compareBox').innerHTML=`<details class="finding ${state.compare.delta>=0?'good':'warn'}"><summary><strong>${esc(state.compare.recommendation)}</strong><div class="simple-line">Tap to see the numbers behind this recommendation.</div></summary><p>Older score: ${state.compare.previousScore} • This score: ${state.compare.currentScore} • Fixed: ${state.compare.fixedCount} • New problems: ${state.compare.newIssueCount}</p></details>`}
+  else $('compareBox').classList.add('hidden');
 }
-
 function renderGallery(){
   $('shotCount').textContent=String(state.shots.length);
-  $('gallery').innerHTML=state.shots.length
-    ?state.shots.map((s,i)=>`<button class="shot" data-shot="${i}"><img src="${s.data}" alt="${esc(s.label)}"><span>${esc(s.label)}</span></button>`).join('')
-    :'<div class="small">Screenshots will appear automatically during the audit.</div>';
+  $('gallery').innerHTML=state.shots.length?state.shots.map((s,i)=>`<button class="shot" data-shot="${i}"><img src="${s.data}" alt="${esc(s.label)}"><span>${esc(s.label)}</span></button>`).join(''):'<div class="small">Screenshots will appear automatically during the audit.</div>';
   document.querySelectorAll('#gallery [data-shot]').forEach(b=>b.onclick=()=>openShot(Number(b.dataset.shot)));
 }
 function renderControlTests(){
-  $('controlCount').textContent=String(state.controlTests.length);
-  $('controlList').innerHTML=state.controlTests.length
-    ?state.controlTests.map(x=>`<div class="control-test ${x.status==='FAIL'?'bad':x.status==='PASS'?'good':'warn'}"><strong>${esc(x.label||'Control')}</strong><div class="small">${esc(x.status)}${x.detail?` • ${esc(x.detail)}`:''}</div></div>`).join('')
-    :'<div class="small">Safe controls will be tested automatically with before and after screenshots.</div>';
+  const tested=state.controlTests.filter(x=>x.label!=='Safe control discovery').length;
+  $('controlCount').textContent=String(tested);
+  $('controlList').innerHTML=state.controlTests.length?state.controlTests.map(x=>`<div class="control-test ${x.status==='FAIL'?'bad':x.status==='PASS'?'good':'warn'}"><strong>${esc(x.label||'Control')}</strong><div class="small">${esc(x.status)}${x.detail?` • ${esc(x.detail)}`:''}</div></div>`).join(''):'<div class="small">Safe controls will be tested automatically with before and after screenshots.</div>';
 }
 function openShot(i){const s=state.shots[i];if(!s)return;$('shotTitle').textContent=s.label;$('shotImage').src=s.data;$('shotModal').classList.remove('hidden')}
 function closeShot(){$('shotModal').classList.add('hidden');$('shotImage').removeAttribute('src')}
-
-function renderHistory(){
-  const h=Storage.history();
-  $('history').innerHTML=h.length
-    ?h.slice(0,6).map(x=>`<button class="history-item history-open" data-history-id="${esc(x.snapshotId||'')}" ${x.snapshotId?'':'disabled'}><strong>${esc(x.meta?.projectLabel||simpleProject(x.meta))}</strong><div class="small">${new Date(x.createdAt).toLocaleString()} • Score ${x.score}${x.screenshotCount!=null?` • ${x.screenshotCount} screenshots`:''}${x.snapshotId?' • Tap to reopen saved ZIP':' • Older record only'}</div></button>`).join('')
-    :'<div class="small">No older audits saved on this device.</div>';
-}
-async function openHistorySnapshot(id){
-  if(!id)return;
-  status('Opening saved project…');
-  const saved=await Storage.getSnapshot(id);
-  if(!saved?.blob){status('Saved ZIP unavailable');notice('This older audit was saved before project ZIP history was added, so its files cannot be reopened automatically.');return}
-  const file=new File([saved.blob],saved.name||'saved-project.zip',{type:'application/zip'});
-  await loadProject([file],{skipConfirm:true});
-}
+function renderHistory(){const h=Storage.history();$('history').innerHTML=h.length?h.slice(0,6).map(x=>`<button class="history-item history-open" data-history-id="${esc(x.snapshotId||'')}" ${x.snapshotId?'':'disabled'}><strong>${esc(x.meta?.projectLabel||simpleProject(x.meta))}</strong><div class="small">${new Date(x.createdAt).toLocaleString()} • Score ${x.score}${x.screenshotCount!=null?` • ${x.screenshotCount} screenshots`:''}${x.snapshotId?' • Tap to reopen saved ZIP':' • Older record only'}</div></button>`).join(''):'<div class="small">No older audits saved on this device.</div>'}
+async function openHistorySnapshot(id){if(!id)return;status('Opening saved project…');const saved=await Storage.getSnapshot(id);if(!saved?.blob){status('Saved ZIP unavailable');notice('This older audit was saved before project ZIP history was added, so its files cannot be reopened automatically.');return}const file=new File([saved.blob],saved.name||'saved-project.zip',{type:'application/zip'});await loadProject([file],{skipConfirm:true})}
 
 function buildReport(){
   const a=state.audit;if(!a)return'No audit has been run yet.';
@@ -311,97 +299,32 @@ function buildReport(){
 }
 async function copyReport(){
   const report=buildReport();
-  try{
-    if(!navigator.clipboard?.writeText)throw new Error('Clipboard API unavailable');
-    await navigator.clipboard.writeText(report);
-    status('Copied');
-    return true;
-  }catch{}
-  const ta=document.createElement('textarea');
-  ta.value=report;ta.setAttribute('readonly','');
-  ta.style.position='fixed';ta.style.left='-9999px';ta.style.top='0';
-  document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length);
-  let copied=false;
-  try{copied=document.execCommand('copy')===true}catch{}
-  ta.remove();
-  if(copied){status('Copied');return true}
-  status('Copy blocked');notice('Your browser blocked automatic copy. Press and hold the audit text, then choose Copy.');
-  return false;
+  try{if(!navigator.clipboard?.writeText)throw new Error('Clipboard API unavailable');await navigator.clipboard.writeText(report);status('Copied');return true}catch{}
+  const ta=document.createElement('textarea');ta.value=report;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';ta.style.top='0';document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length);
+  let copied=false;try{copied=document.execCommand('copy')===true}catch{}ta.remove();
+  if(copied){status('Copied');return true}status('Copy blocked');notice('Your browser blocked automatic copy. Press and hold the audit text, then choose Copy.');return false;
 }
 async function downloadReport(){
   const report=buildReport(),file=new File([report],'debooger2000-audit.txt',{type:'text/plain;charset=utf-8'});
   const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
-  if(isiOS&&navigator.share&&navigator.canShare?.({files:[file]})){
-    try{await navigator.share({files:[file],title:'debooger2000 audit'});status('Report ready to save');return true}catch(e){if(e?.name==='AbortError')return false}
-  }
-  const url=URL.createObjectURL(file),a=document.createElement('a');
-  a.href=url;a.download=file.name;a.rel='noopener';a.style.display='none';document.body.appendChild(a);
-  try{a.click();status('Download started');return true}
-  catch{window.open(url,'_blank');status('Report opened');return true}
-  finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000)}
+  if(isiOS&&navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:'debooger2000 audit'});status('Report ready to save');return true}catch(e){if(e?.name==='AbortError')return false}}
+  const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.rel='noopener';a.style.display='none';document.body.appendChild(a);
+  try{a.click();status('Download started');return true}catch{window.open(url,'_blank');status('Report opened');return true}finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000)}
 }
-function renderProviders(){
-  const p=loadProviderSettings();
-  $('groqEnabled').checked=!!p.groq?.enabled;$('groqKey').value=p.groq?.key||'';
-  $('googleEnabled').checked=!!p.google?.enabled;$('googleKey').value=p.google?.key||'';
-  $('providerStatus').textContent=providerSummary(p);
-}
-function saveProviders(){
-  const p={groq:{enabled:$('groqEnabled').checked,key:$('groqKey').value.trim()},google:{enabled:$('googleEnabled').checked,key:$('googleKey').value.trim()}};
-  saveProviderSettings(p);$('providerStatus').textContent=providerSummary(p);status('AI setting ready');
-}
+function renderProviders(){const p=loadProviderSettings();$('groqEnabled').checked=!!p.groq?.enabled;$('groqKey').value=p.groq?.key||'';$('googleEnabled').checked=!!p.google?.enabled;$('googleKey').value=p.google?.key||'';$('providerStatus').textContent=providerSummary(p)}
+function saveProviders(){const p={groq:{enabled:$('groqEnabled').checked,key:$('groqKey').value.trim()},google:{enabled:$('googleEnabled').checked,key:$('googleKey').value.trim()}};saveProviderSettings(p);$('providerStatus').textContent=providerSummary(p);status('AI setting ready')}
 function clearProject(){
   if(runtime.files.size&&!confirm('Clear this temporary project? Older audit history will stay.'))return;
-  runtime.clear();state.current=null;state.runtimeErrors=[];state.audit=null;state.compare=null;state.shots=[];state.controlTests=[];state.renderScore=null;
-  refreshFiles();renderGallery();renderControlTests();
-  $('projectSummary').innerHTML='<div class="small">Open something and I will explain it in simple English.</div>';
-  $('scoreBox').innerHTML='<div class="score">—</div><div class="small">Open a project to begin.</div>';
-  $('metrics').innerHTML='';
-  $('findings').innerHTML='<div class="small">Problems will be explained here in simple English. Tap one for the detailed reason.</div>';
-  $('compareBox').classList.add('hidden');frame.srcdoc=welcomeHtml();notice('');status('Ready');
+  runtime.clear();state.current=null;state.runtimeErrors=[];state.audit=null;state.compare=null;state.shots=[];state.controlTests=[];state.captureErrors=[];state.renderScore=null;state.captureAttempted=false;state.captureCompleted=false;state.controlsAttempted=false;state.controlsCompleted=false;state.controlsFound=0;
+  refreshFiles();renderGallery();renderControlTests();$('projectSummary').innerHTML='<div class="small">Open something and I will explain it in simple English.</div>';$('scoreBox').innerHTML='<div class="score">—</div><div class="small">Open a project to begin.</div>';$('metrics').innerHTML='';$('findings').innerHTML='<div class="small">Problems will be explained here in simple English. Tap one for the detailed reason.</div>';$('compareBox').classList.add('hidden');frame.srcdoc=welcomeHtml();notice('');status('Ready');
 }
 function welcomeHtml(){return'<!doctype html><html><body style="font-family:Inter,system-ui;padding:42px"><h1 style="font-size:24px">debooger2000</h1><p>Open a project to see the real pages, check the files, and explain what needs attention.</p></body></html>'}
-function openPasteModal(){
-  $('moreModal').classList.add('hidden');$('pasteModal').classList.remove('hidden');
-  if(navigator.clipboard?.readText)navigator.clipboard.readText().then(t=>{
-    if(!t)return;
-    if(/^https?:\/\//i.test(t.trim())){$('pasteLink').value=t.trim();switchPaste('link')}
-    else if(!$('pasteText').value)$('pasteText').value=t;
-  }).catch(()=>{});
-}
+function openPasteModal(){$('moreModal').classList.add('hidden');$('pasteModal').classList.remove('hidden');if(navigator.clipboard?.readText)navigator.clipboard.readText().then(t=>{if(!t)return;if(/^https?:\/\//i.test(t.trim())){$('pasteLink').value=t.trim();switchPaste('link')}else if(!$('pasteText').value)$('pasteText').value=t}).catch(()=>{})}
 function closePasteModal(){$('pasteModal').classList.add('hidden')}
-function switchPaste(mode){
-  document.querySelectorAll('.paste-tab').forEach(b=>b.classList.toggle('active',b.dataset.paste===mode));
-  $('pasteTextPanel').classList.toggle('hidden',mode!=='text');
-  $('pasteLinkPanel').classList.toggle('hidden',mode!=='link');
-}
-async function openPastedText(){
-  const text=$('pasteText').value;if(!text.trim())return;
-  const type=$('pasteType').value,name=`pasted.${type}`,file=new File([text],name,{type:mime(name)});
-  closePasteModal();await loadProject([file]);
-}
-async function openPastedLink(){
-  const url=$('pasteLink').value.trim();
-  if(!/^https?:\/\//i.test(url)){notice('Paste a full web link.');return}
-  status('Opening link…');
-  try{
-    const res=await fetch(url,{credentials:'omit'});
-    if(!res.ok)throw new Error(`The link returned ${res.status}`);
-    const blob=await res.blob();
-    let name='download';
-    try{name=decodeURIComponent(new URL(url).pathname.split('/').pop()||'download')}catch{}
-    if(!ext(name)){if(blob.type.includes('zip'))name+='.zip';else if(blob.type.includes('html'))name+='.html';else name+='.bin'}
-    closePasteModal();await loadProject([new File([blob],name,{type:blob.type||mime(name)})]);
-  }catch{status('Link blocked');notice('I could not open that link directly. Open or share the actual file instead.')}
-}
-async function toggleFullScreen(){
-  const entering=!main.classList.contains('viewer-full');
-  main.classList.toggle('viewer-full',entering);document.body.classList.toggle('full-active',entering);
-  $('exitFullBtn').classList.toggle('hidden',!entering);
-  if(entering&&document.documentElement.requestFullscreen)try{await document.documentElement.requestFullscreen()}catch{}
-  if(!entering&&document.fullscreenElement)try{await document.exitFullscreen()}catch{}
-  setTimeout(applyFit,100);
-}
+function switchPaste(mode){document.querySelectorAll('.paste-tab').forEach(b=>b.classList.toggle('active',b.dataset.paste===mode));$('pasteTextPanel').classList.toggle('hidden',mode!=='text');$('pasteLinkPanel').classList.toggle('hidden',mode!=='link')}
+async function openPastedText(){const text=$('pasteText').value;if(!text.trim())return;const type=$('pasteType').value,name=`pasted.${type}`,file=new File([text],name,{type:mime(name)});closePasteModal();await loadProject([file])}
+async function openPastedLink(){const url=$('pasteLink').value.trim();if(!/^https?:\/\//i.test(url)){notice('Paste a full web link.');return}status('Opening link…');try{const res=await fetch(url,{credentials:'omit'});if(!res.ok)throw new Error(`The link returned ${res.status}`);const blob=await res.blob();let name='download';try{name=decodeURIComponent(new URL(url).pathname.split('/').pop()||'download')}catch{}if(!ext(name)){if(blob.type.includes('zip'))name+='.zip';else if(blob.type.includes('html'))name+='.html';else name+='.bin'}closePasteModal();await loadProject([new File([blob],name,{type:blob.type||mime(name)})])}catch{status('Link blocked');notice('I could not open that link directly. Open or share the actual file instead.')}}
+async function toggleFullScreen(){const entering=!main.classList.contains('viewer-full');main.classList.toggle('viewer-full',entering);document.body.classList.toggle('full-active',entering);$('exitFullBtn').classList.toggle('hidden',!entering);if(entering&&document.documentElement.requestFullscreen)try{await document.documentElement.requestFullscreen()}catch{}if(!entering&&document.fullscreenElement)try{await document.exitFullscreen()}catch{}setTimeout(applyFit,100)}
 function openMore(){$('moreModal').classList.remove('hidden')}
 function closeMore(){$('moreModal').classList.add('hidden')}
 
@@ -411,7 +334,7 @@ window.addEventListener('message',e=>{
   if(d.type==='debooger-nav'){const p=norm(resolve(d.base,d.href));if(runtime.files.has(p))select(p)}
   else if(d.type==='debooger-runtime-error'){state.runtimeErrors.push(d);status('Running problem found')}
   else if(d.type==='debooger-screenshot'&&d.data){state.shots.push({label:d.label||'Screen',data:d.data,score:d.score||null,phase:d.phase||''});renderGallery()}
-  else if(d.type==='debooger-screenshot-error'){notice('A screen image could not be captured: '+d.message)}
+  else if(d.type==='debooger-screenshot-error'){state.captureErrors.push({label:d.label||'Screen',phase:d.phase||'',message:d.message||'Unknown capture error'});notice('Screenshot failed: '+(d.message||'Unknown capture error'))}
   else if(d.type==='debooger-control-result'){state.controlTests.push(d.result);renderControlTests()}
   if(state.captureWaiters.has(d.type))state.captureWaiters.get(d.type)(d);
 });
@@ -419,52 +342,5 @@ window.addEventListener('message',e=>{
 ['dragenter','dragover'].forEach(v=>$('dropzone').addEventListener(v,e=>{e.preventDefault();$('dropzone').classList.add('drag')}));
 ['dragleave','drop'].forEach(v=>$('dropzone').addEventListener(v,e=>{e.preventDefault();$('dropzone').classList.remove('drag')}));
 $('dropzone').addEventListener('drop',e=>loadProject(e.dataTransfer.files));
-$('fileInput').onchange=e=>loadProject(e.target.files);
-$('folderInput').onchange=e=>loadProject(e.target.files);
-$('folderBtn').onclick=()=>$('folderInput').click();
-$('pasteInlineBtn').onclick=openPasteModal;
-$('clearInlineBtn').onclick=()=>{closeMore();clearProject()};
-$('clearBtn').onclick=clearProject;
-$('adaptToggle').onchange=()=>setDevice(state.mode);
-$('saveProviders').onclick=saveProviders;
-$('pasteBtn').onclick=openPasteModal;
-$('moreBtn').onclick=openMore;
-$('closeMoreBtn').onclick=closeMore;
-$('moreModal').addEventListener('click',e=>{if(e.target===$('moreModal'))closeMore()});
-$('closePasteBtn').onclick=closePasteModal;
-$('pasteModal').addEventListener('click',e=>{if(e.target===$('pasteModal'))closePasteModal()});
-document.querySelectorAll('.paste-tab').forEach(b=>b.onclick=()=>switchPaste(b.dataset.paste));
-$('openPasteTextBtn').onclick=openPastedText;
-$('openPasteLinkBtn').onclick=openPastedLink;
-$('fullBtn').onclick=toggleFullScreen;
-$('exitFullBtn').onclick=toggleFullScreen;
-$('fitWidthBtn').onclick=()=>setFit('width');
-$('fitPageBtn').onclick=()=>setFit('page');
-$('actualBtn').onclick=()=>setFit('actual');
-$('desktopWidth').onchange=e=>{state.desktopWidth=Number(e.target.value)||1440;applyDevice()};
-document.querySelectorAll('.device-btn').forEach(b=>b.onclick=()=>setDevice(b.dataset.device));
-$('closeShotBtn').onclick=closeShot;
-$('shotModal').addEventListener('click',e=>{if(e.target===$('shotModal'))closeShot()});
-document.addEventListener('click',async e=>{
-  const actionButton=e.target.closest?.('[data-audit-action]');
-  if(actionButton){
-    e.preventDefault();
-    const action=actionButton.dataset.auditAction;
-    if(action==='audit')await runAudit();
-    else if(action==='copy')await copyReport();
-    else if(action==='download')await downloadReport();
-    return;
-  }
-  const historyButton=e.target.closest?.('[data-history-id]');
-  if(historyButton&&!historyButton.disabled){
-    e.preventDefault();
-    await openHistorySnapshot(historyButton.dataset.historyId);
-  }
-});
-window.addEventListener('resize',applyFit);
-document.addEventListener('fullscreenchange',()=>{
-  if(!document.fullscreenElement&&main.classList.contains('viewer-full')&&document.fullscreenEnabled){
-    main.classList.remove('viewer-full');document.body.classList.remove('full-active');$('exitFullBtn').classList.add('hidden');applyFit();
-  }
-});
+$('fileInput').onchange=e=>loadProject(e.target.files);$('folderInput').onchange=e=>loadProject(e.target.files);$('folderBtn').onclick=()=>$('folderInput').click();$('pasteInlineBtn').onclick=openPasteModal;$('clearInlineBtn').onclick=()=>{closeMore();clearProject()};$('clearBtn').onclick=clearProject;$('adaptToggle').onchange=()=>setDevice(state.mode);$('saveProviders').onclick=saveProviders;$('pasteBtn').onclick=openPasteModal;$('moreBtn').onclick=openMore;$('closeMoreBtn').onclick=closeMore;$('moreModal').addEventListener('click',e=>{if(e.target===$('moreModal'))closeMore()});$('closePasteBtn').onclick=closePasteModal;$('pasteModal').addEventListener('click',e=>{if(e.target===$('pasteModal'))closePasteModal()});document.querySelectorAll('.paste-tab').forEach(b=>b.onclick=()=>switchPaste(b.dataset.paste));$('openPasteTextBtn').onclick=openPastedText;$('openPasteLinkBtn').onclick=openPastedLink;$('fullBtn').onclick=toggleFullScreen;$('exitFullBtn').onclick=toggleFullScreen;$('fitWidthBtn').onclick=()=>setFit('width');$('fitPageBtn').onclick=()=>setFit('page');$('actualBtn').onclick=()=>setFit('actual');$('desktopWidth').onchange=e=>{state.desktopWidth=Number(e.target.value)||1440;applyDevice()};document.querySelectorAll('.device-btn').forEach(b=>b.onclick=()=>setDevice(b.dataset.device));$('closeShotBtn').onclick=closeShot;$('shotModal').addEventListener('click',e=>{if(e.target===$('shotModal'))closeShot()});document.addEventListener('click',async e=>{const actionButton=e.target.closest?.('[data-audit-action]');if(actionButton){e.preventDefault();const action=actionButton.dataset.auditAction;if(action==='audit')await runAudit();else if(action==='copy')await copyReport();else if(action==='download')await downloadReport();return}const historyButton=e.target.closest?.('[data-history-id]');if(historyButton&&!historyButton.disabled){e.preventDefault();await openHistorySnapshot(historyButton.dataset.historyId)}});window.addEventListener('resize',applyFit);document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&main.classList.contains('viewer-full')&&document.fullscreenEnabled){main.classList.remove('viewer-full');document.body.classList.remove('full-active');$('exitFullBtn').classList.add('hidden');applyFit()}});
 renderHistory();renderProviders();refreshFiles();renderGallery();renderControlTests();applyDevice();frame.srcdoc=welcomeHtml();
