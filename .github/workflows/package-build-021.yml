@@ -1,0 +1,20 @@
+name: Package Build 021
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare package
+        run: |
+          mkdir -p dist/debooger2000-build-021-upload-fix
+          cp index.html dist/debooger2000-build-021-upload-fix/
+          cp -R css dist/debooger2000-build-021-upload-fix/
+          cp -R js dist/debooger2000-build-021-upload-fix/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debooger2000-build-021-upload-fix
+          path: dist/debooger2000-build-021-upload-fix
+          if-no-files-found: error
