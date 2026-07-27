@@ -42,7 +42,7 @@ function showMobileSheet(which){
 function fileDescription(name){
   const lower=name.toLowerCase(),base=lower.split('/').pop()||lower,e=ext(name);
   if(/(^|\/)index\.html?$/.test(lower))return'This is the project’s front door. It is usually the first page the browser opens.';
-  if(/audit[-_.]?engine\.(js|ts)$/.test(base))return'This is the part that reads the code and looks for problems. It tries hard not to scare you with guesses: clear problems and 'please check this' notes stay separate.';
+  if(/audit[-_.]?engine\.(js|ts)$/.test(base))return'This is the part that reads the code and looks for problems. It keeps clear problems and review notes separate.';
   if(/preview[-_.]?helper\.(js|ts)$/.test(base))return'This watches the live page while it runs. It notices crashes, checks the visible layout, safely tries harmless controls, and helps save useful page pictures.';
   if(/project[-_.]?engine\.(js|ts)$/.test(base))return'This is the project opener. It unpacks ZIPs, finds the starting file, connects the project pieces, and prepares React or Vite code so you can see the real screen.';
   if(/device[-_.]?engine\.(js|ts)$/.test(base))return'This changes the preview size so you can quickly see how the project looks on a desktop, iPad, or phone.';
@@ -626,28 +626,11 @@ async function toggleFullScreen(){
 function openMore(){$('moreModal').classList.remove('hidden')}
 function closeMore(){$('moreModal').classList.add('hidden')}
 
-function openNativePicker(kind='file'){
-  const input=kind==='folder'?$('folderInput'):$('fileInput');
-  if(!input){status('File picker is unavailable');notice('I could not find the browser file picker. Reload the page and try again.');return false}
-  input.value='';
-  status(kind==='folder'?'Choose a project folder…':'Choose a file or ZIP…');
-  try{
-    if(typeof input.showPicker==='function'){input.showPicker();return true}
-    input.click();
-    return true;
-  }catch{
-    try{input.click();return true}catch{
-      status('File picker did not open');
-      notice('The browser did not open its file picker. On iPhone, try the Choose file / ZIP button again or use Paste code.');
-      return false;
-    }
-  }
-}
-
 function handlePickedFiles(input){
   const files=input?.files;
   if(!files?.length){status('No file chosen');return}
-  loadProject(files).finally(()=>{try{input.value=''}catch{}});
+  status(files.length===1?'File selected. Opening…':`${files.length} files selected. Opening…`);
+  Promise.resolve(loadProject(files)).finally(()=>{try{input.value=''}catch{}});
 }
 
 window.addEventListener('message',e=>{
@@ -698,8 +681,6 @@ $('actualBtn').onclick=()=>setFit('actual');
 $('desktopWidth').onchange=e=>{state.desktopWidth=Number(e.target.value)||1440;applyDevice()};
 document.querySelectorAll('.device-btn').forEach(b=>b.onclick=()=>setDevice(b.dataset.device));
 document.addEventListener('click',async e=>{
-  const picker=e.target.closest?.('[data-file-picker]');
-  if(picker){e.preventDefault();openNativePicker(picker.dataset.filePicker);return}
   const shotButton=e.target.closest?.('[data-shot-index]');
   if(shotButton){e.preventDefault();showScreenshot(Number(shotButton.dataset.shotIndex)||0);return}
   const actionButton=e.target.closest?.('[data-audit-action]');

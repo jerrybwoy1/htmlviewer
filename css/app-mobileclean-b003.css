@@ -1,5 +1,5 @@
 /* debooger2000 build 020 — single authoritative visual system */
-:root{
+:root{color-scheme:light only;
   --bg:#f5f7f5;--surface:#ffffff;--surface-2:#f8faf8;--surface-3:#f1f4f1;
   --line:#dde3dd;--line-strong:#c8d0c8;--text:#23272b;--text-2:#5f6962;--text-3:#88918b;
   --green:#4bb229;--green-dark:#378b22;--green-soft:#eff8ec;--green-line:#c9e4bf;
