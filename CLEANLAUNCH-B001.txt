@@ -1,4 +1,0 @@
-DEBOOGER2000 CLEANLAUNCH B001
-Recovery base: verified Build 018 R2
-Purpose: restore known-working hosted controls and file opening while preventing stale cached JavaScript from broken later builds.
-Date: 2026-07-27
