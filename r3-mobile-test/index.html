@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>debooger2000</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>debooger2000</span>
+    </div>
+    <span class="status-badge" id="statusBadge">Ready when you are</span>
+    <div class="spacer"></div>
+    <button class="btn ghost topbar-project-action hidden" id="pasteBtn" type="button">Paste code</button>
+    <button class="btn ghost topbar-project-action hidden" id="clearBtn" type="button">Clear</button>
+  </header>
+
+  <div class="progress-bar hidden" id="progressBar" aria-hidden="true">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <section class="landing" id="landing" aria-labelledby="landingTitle">
+    <div class="landing-shell">
+      <div class="landing-copy">
+        <div class="landing-badge">Beginner-friendly project debugger</div>
+        <h1 id="landingTitle">Open your project and I'll walk through it with you.</h1>
+        <p>I’ll render the real page, inspect the source, load every HTML page at seven screen sizes, test safe controls, explain problems in plain English, and build one ready-to-copy repair instruction.</p>
+        <div class="feature-grid" aria-label="What debooger2000 does">
+          <div class="feature-card"><span class="feature-icon green" aria-hidden="true">✓</span><div><strong>Real preview</strong><span>Desktop, iPad, and mobile use fixed device viewports that scale to fit.</span></div></div>
+          <div class="feature-card"><span class="feature-icon amber" aria-hidden="true">●</span><div><strong>Deep source check</strong><span>Checks the actual DOM and source files without reading code examples as markup.</span></div></div>
+          <div class="feature-card"><span class="feature-icon green" aria-hidden="true">▣</span><div><strong>Runtime tester</strong><span>Loads every page, checks console errors and overflow, then activates safe controls.</span></div></div>
+          <div class="feature-card"><span class="feature-icon amber" aria-hidden="true">!</span><div><strong>AI repair prompt</strong><span>One complete instruction built only from evidence the tester actually found.</span></div></div>
+        </div>
+      </div>
+
+      <div class="open-card">
+        <div class="open-card-kicker">Start here</div>
+        <div class="open-card-title">Open a project</div>
+        <div class="open-card-copy">ZIP is easiest on iPhone. You can also pick files, open a folder, or paste code.</div>
+        <label class="dropzone" id="dropzone" for="fileInput" aria-label="Choose a file or ZIP">
+          <span class="drop-icon" aria-hidden="true">+</span>
+          <strong>Choose a file or ZIP</strong>
+          <span class="muted">Tap to open the file picker. On desktop, drag files here.</span>
+        </label>
+        <div class="open-actions">
+          <label class="btn primary" id="chooseFilesBtn" for="fileInput">Choose file / ZIP</label>
+          <label class="btn ghost" id="chooseFolderBtn" for="folderInput">Open folder</label>
+          <button type="button" class="btn ghost" id="landingPasteBtn">Paste code</button>
+        </div>
+        <input id="fileInput" name="project-files" type="file" multiple class="file-input-hidden" aria-label="Choose files or ZIP">
+        <input id="folderInput" name="project-folder" type="file" class="file-input-hidden" webkitdirectory multiple aria-label="Open project folder">
+        <div class="reassurance"><span class="reassurance-dot" aria-hidden="true"></span>Your original files are never changed.</div>
+        <div class="file-hint">HTML · CSS · JavaScript · TypeScript · React · ZIP</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="workspace hidden" id="workspace">
+    <aside class="panel panel-left" id="leftPanel" aria-label="Project information">
+      <div class="panel-heading"><div><span class="eyebrow">Your project</span><div class="panel-title">What you opened</div></div><button class="btn icon-btn" id="leftCollapseBtn" type="button" aria-label="Collapse project panel">‹</button></div>
+      <div class="block project-block"><div class="block-head">About this project</div><div class="block-body" id="projectSummary"><p class="muted">Open a project and I'll explain what I found.</p></div></div>
+      <div class="block"><div class="block-body compact-actions"><label class="btn primary full" id="reopenFilesBtn" for="fileInput">Open another project</label><label class="btn ghost full" id="reopenFolderBtn" for="folderInput">Open a folder</label><button class="btn ghost full" id="clearBtnPanel" type="button">Clear project</button></div></div>
+      <details class="block" open><summary class="block-head clickable"><span>Files I found</span><span class="count-badge" id="fileCountBadge">0</span></summary><div class="block-body tight"><div id="fileList" class="file-list"><p class="muted">No project open yet.</p></div></div></details>
+      <details class="block"><summary class="block-head clickable"><span>Earlier audits</span></summary><div class="block-body" id="historyList"><p class="muted">No earlier audits saved yet.</p></div></details>
+    </aside>
+    <button class="panel-restore panel-restore-left hidden" id="leftRestoreBtn" type="button" aria-label="Show project panel">›</button>
+
+    <main class="preview-main" id="previewMain">
+      <div class="preview-toolbar" id="previewToolbar">
+        <div class="segmented" role="group" aria-label="Device size"><button class="seg active" type="button" data-device="desktop">Desktop</button><button class="seg" type="button" data-device="tablet">iPad</button><button class="seg" type="button" data-device="mobile">Mobile</button></div>
+        <div class="toolbar-divider" aria-hidden="true"></div>
+        <button class="btn ghost compact" id="fullscreenBtn" type="button">Full screen</button><div class="device-size-label" id="deviceSizeLabel">1440 × 900</div><div class="spacer"></div><button class="btn ghost compact" id="testPagesBtn" type="button" disabled>View runtime test</button>
+      </div>
+      <div id="pageTabsBar" class="page-tabs-bar hidden"></div><div id="notice" class="notice hidden" role="status"></div>
+      <div class="viewer-wrap" id="viewerWrap"><div class="device-canvas" id="deviceCanvas"><div class="device-shell" id="deviceShell"><iframe id="previewFrame" class="device-frame" title="Project preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe></div></div></div>
+    </main>
+
+    <button class="panel-restore panel-restore-right hidden" id="rightRestoreBtn" type="button" aria-label="Show audit panel">‹</button>
+    <aside class="panel panel-right" id="rightPanel" aria-label="Audit results">
+      <div class="panel-heading"><div><span class="eyebrow">Audit</span><div class="panel-title">What I found</div></div><div class="panel-heading-actions"><button class="btn dev-toggle" id="devModeToggle" type="button" title="Switch between plain English and developer view">Dev mode</button><button class="btn icon-btn" id="rightCollapseBtn" type="button" aria-label="Collapse audit panel">›</button></div></div>
+      <div class="block score-block"><div class="block-head">Overall result</div><div class="block-body" id="scoreBox"><div class="score-line"><span class="score" id="scoreNum">—</span><div><div class="score-label" id="scoreLabel">Open a project to see the score.</div><div class="score-condition" id="scoreCondition"></div><div class="score-meta" id="scoreMeta"></div></div></div></div></div>
+      <div class="block compare-block hidden" id="compareBlock"><div class="block-head">Since last time</div><div class="block-body" id="compareBody"></div></div>
+      <div class="block attention-block"><div class="block-head">What needs your attention</div><div class="block-body" id="findings"><p class="muted">Problems show up here after the source and runtime tests finish.</p></div></div>
+      <details class="block" open><summary class="block-head clickable"><span>Buttons and links found</span><span class="count-badge" id="controlCount">0</span></summary><div class="block-body" id="controlList"><p class="muted">Run a test to see controls and what was actually exercised.</p></div></details>
+      <div class="block"><div class="block-head">AI fix instruction</div><div class="block-body"><p class="muted" id="promptNote">Run a test first. Then copy this and paste it into ChatGPT or Claude.</p><textarea id="promptOutput" name="repair-prompt" class="prompt-area" aria-label="AI repair instruction" readonly placeholder="Run a test first."></textarea><div class="prompt-actions"><button class="btn primary" id="copyPromptBtn" type="button" disabled>Copy instruction</button><button class="btn ghost" id="downloadPromptBtn" type="button" disabled>Download .txt</button></div><p class="copied-note hidden" id="copiedNote">Copied.</p></div></div>
+      <div class="audit-actions"><button class="btn primary" id="runAuditBtn" type="button" disabled>Run full test</button><button class="btn ghost" id="copyReportBtn" type="button" disabled>Copy report</button><button class="btn ghost" id="downloadReportBtn" type="button" disabled>Download report</button><button class="btn ghost" id="copyHtmlBtn" type="button" disabled>Copy as HTML</button><button class="btn ghost" id="downloadHtmlBtn" type="button" disabled>Download .html</button></div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal hidden" id="pasteModal" role="dialog" aria-modal="true" aria-labelledby="pasteTitle"><div class="modal-card"><div class="modal-head"><span id="pasteTitle">Paste code to open</span><button class="btn ghost" id="closePasteBtn" type="button">Close</button></div><div class="modal-body"><textarea id="pasteText" name="pasted-code" class="field paste-area" aria-label="Code to open" placeholder="Paste HTML, CSS, JavaScript, or JSON here..."></textarea><div class="paste-row"><select id="pasteType" name="paste-type" class="field" aria-label="Pasted code type"><option value="html">HTML</option><option value="css">CSS</option><option value="js">JavaScript</option><option value="json">JSON</option></select><button class="btn primary" id="openPasteBtn" type="button">Open this code</button></div></div></div></div>
+<div class="modal hidden" id="testerModal" role="dialog" aria-modal="true" aria-labelledby="testerTitle"><div class="modal-card tester-card"><div class="modal-head"><span id="testerTitle">Runtime Page &amp; Control Test</span><button class="btn ghost" id="closeTesterBtn" type="button">Close</button></div><div class="tester-progress" id="testerProgress"><div class="tester-phase" id="testerPhase">No runtime test yet</div><div class="tester-bar"><div class="tester-bar-fill" id="testerBarFill"></div></div><div class="tester-sub" id="testerSub">Run the full test first.</div></div><div class="tester-body" id="testerBody"><div class="tester-empty"><p class="muted tester-copy">The full test loads each HTML page at Desktop, iPad, and five phone widths, checks console errors, overflow, box collisions, flex/grid containment, clipped content, and fixed/sticky control coverage, then activates safe controls. Actions such as Delete, Send, Pay, Upload, Login, and Submit are listed but skipped automatically.</p></div></div></div></div>
+<script src="js/zip-reader.js"></script>
+<script src="js/audit-engine.js"></script>
+<script src="js/project-loader.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
