@@ -1,0 +1,37 @@
+name: B003 cleanup
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[b003-clean]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove stale version markers
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          css=Path('css/app-mobileclean-b003.css')
+          c=css.read_text().replace('/* debooger2000 build 020 — single authoritative visual system */','/* debooger2000 MobileClean B003 — authoritative visual system */',1)
+          css.write_text(c)
+          old=Path('js/zip-fallback.js')
+          new=Path('js/zip-fallback-mobileclean-b003.js')
+          if old.exists(): old.rename(new)
+          h=Path('index.html').read_text()
+          h=h.replace('js/zip-fallback.js?v=mobileclean-live-b002-20260727','js/zip-fallback-mobileclean-b003.js?v=20260727-b003')
+          Path('index.html').write_text(h)
+          PY
+          node --check js/app-mobileclean-b003.js
+          node --check js/zip-fallback-mobileclean-b003.js
+          ! grep -R -iE 'MobileClean Live B002|build 020|mobileclean-live-b002|please check this' index.html css js
+          git config user.name "Debooger Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Clean B003 stale version markers [b003-clean]"
+          git push origin HEAD:main
