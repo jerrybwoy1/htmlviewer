@@ -1,0 +1,96 @@
+name: Assemble MobileClean B002
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build clean unique asset set
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          index = (root/'index.html').read_text(encoding='utf-8')
+          app = (root/'js/app.js').read_text(encoding='utf-8')
+          css = (root/'css/app.css').read_text(encoding='utf-8')
+
+          bad = "return'This is the part that reads the code and looks for problems. It tries hard not to scare you with guesses: clear problems and 'please check this' notes stay separate.';"
+          good = 'return"This is the part that reads the code and looks for problems. It tries hard not to scare you with guesses: clear problems and \'please check this\' notes stay separate.";'
+          if bad not in app:
+              raise SystemExit('Expected parser-bug line was not found; refusing an uncertain build.')
+          app = app.replace(bad, good, 1)
+
+          names = {
+            'project-engine.js':'debooger2000-mobileclean-20260727-b002-project-engine.mjs',
+            'device-engine.js':'debooger2000-mobileclean-20260727-b002-device-engine.mjs',
+            'audit-engine.js':'debooger2000-mobileclean-20260727-b002-audit-engine.mjs',
+            'storage.js':'debooger2000-mobileclean-20260727-b002-storage.mjs',
+            'provider-settings.js':'debooger2000-mobileclean-20260727-b002-provider-settings.mjs',
+          }
+          for old,new in names.items():
+              app = app.replace("'./"+old+"'", "'./"+new+"'")
+              (root/new).write_text((root/'js'/old).read_text(encoding='utf-8'), encoding='utf-8')
+          (root/'debooger2000-mobileclean-20260727-b002-app.mjs').write_text(app, encoding='utf-8')
+
+          css = css.replace('.file-input{display:none}', '.file-input{position:fixed;left:0;top:0;width:1px;height:1px;padding:0;margin:0;border:0;opacity:0;pointer-events:none;z-index:-1}')
+          css = css.replace('.file-input-hidden{display:none}', '.file-input-hidden{position:fixed;left:0;top:0;width:1px;height:1px;padding:0;margin:0;border:0;opacity:0;pointer-events:none;z-index:-1}')
+          (root/'debooger2000-mobileclean-20260727-b002-app.css').write_text(css, encoding='utf-8')
+
+          index = index.replace('css/app.css', 'debooger2000-mobileclean-20260727-b002-app.css')
+          index = index.replace('js/app.js', 'debooger2000-mobileclean-20260727-b002-app.mjs')
+          index = re.sub(r'<span class="build">.*?</span>', '<span class="build">MobileClean B002</span>', index, count=1)
+          index = index.replace('<title>debooger2000</title>', '<title>debooger2000 — MobileClean B002</title>')
+          if 'http-equiv="Cache-Control"' not in index:
+              index = index.replace('<meta name="theme-color" content="#ffffff">', '<meta name="theme-color" content="#ffffff">\n<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">\n<meta http-equiv="Pragma" content="no-cache">\n<meta http-equiv="Expires" content="0">')
+
+          for input_id in ('fileInput','folderInput'):
+              pos = index.find('id="'+input_id+'"')
+              if pos < 0: raise SystemExit('Missing '+input_id)
+              landing_start=index.find('<section class="empty"')
+              landing_end=index.find('</section>', landing_start)
+              if landing_start <= pos <= landing_end:
+                  raise SystemExit(input_id+' is still trapped inside landing')
+          (root/'index.html').write_text(index, encoding='utf-8')
+
+          (root/'_headers').write_text('/*\n  Cache-Control: no-store, no-cache, must-revalidate, max-age=0\n  Pragma: no-cache\n  Expires: 0\n', encoding='utf-8')
+          PY
+
+          rm -rf css js r3-mobile-test CLEANLAUNCH-B001.txt
+
+          for f in debooger2000-mobileclean-20260727-b002-*.mjs; do node --check "$f"; done
+
+          if grep -R -n --include='*.mjs' "clear problems and 'please check this'" .; then
+            echo 'Fatal please-string is still present' >&2
+            exit 1
+          fi
+
+          if grep -E 'css/app\.css|js/app\.js|build 018|build 021|r3-mobile-test' index.html; then
+            echo 'Stale asset/build reference remains' >&2
+            exit 1
+          fi
+
+          rm -f .github/workflows/mobileclean-b002.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+
+          git status --short
+      - name: Commit validated MobileClean B002
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Deploy DEBOOGER2000 MobileClean B002 clean build'
+          git push origin HEAD:main
