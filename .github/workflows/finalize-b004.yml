@@ -1,0 +1,61 @@
+name: Finalize Debooger MobileClean B004
+on:
+  push:
+    branches: [agent/mobileclean-b004-final]
+    paths: ['.github/workflows/finalize-b004.yml']
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mobileclean-b004-final
+          fetch-depth: 0
+      - name: Rebuild exact audited B004 files
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/b004-release
+          mkdir -p "$OUT"
+          restore() {
+            local name="$1"
+            cat .b004_assembly/"$name".gz.b64.part* | tr -d '\n\r' | base64 -d | gzip -d > "$OUT/$name"
+          }
+          restore _headers
+          restore index.html
+          restore debooger2000-mobileclean-20260727-b004-app.css
+          restore debooger2000-mobileclean-20260727-b004-app.js
+          restore debooger2000-mobileclean-20260727-b004-audit-engine.js
+          restore debooger2000-mobileclean-20260727-b004-project-loader.js
+          restore debooger2000-mobileclean-20260727-b004-zip-reader.js
+          cat > /tmp/b004.sha256 <<'EOF'
+          63b833ab81ee973f0d622d370d4c7bad44145c87b7431cad975d4714de748acc  _headers
+          6a20437727e519ea53d7f3abea6bee0b4fe13ef0797d720827a314b44e62dffb  index.html
+          013d7fe9389470e7f45a53a2b636e13ea7807ebeb35a2c0a7ea52bc6c99186d9  debooger2000-mobileclean-20260727-b004-app.css
+          405abe9373eb05d610a480a450d4181a442c625dae179ba7b0a17012ce3b6471  debooger2000-mobileclean-20260727-b004-app.js
+          0f36fd565cf90cb3025919a4b7871a1f7136aed26c38b4e75822c46b987d3b52  debooger2000-mobileclean-20260727-b004-audit-engine.js
+          87c84c592272a6bf7e84bdf9bf0bed311ddc4a51a9ab9db6ea4b2f5413bb1be3  debooger2000-mobileclean-20260727-b004-project-loader.js
+          2719524365c132a837c81f8db7601d54aa3617daa98b205be87cbfa1306bd27d  debooger2000-mobileclean-20260727-b004-zip-reader.js
+          EOF
+          cd "$OUT"
+          sha256sum -c /tmp/b004.sha256
+          node --check debooger2000-mobileclean-20260727-b004-app.js
+          node --check debooger2000-mobileclean-20260727-b004-audit-engine.js
+          node --check debooger2000-mobileclean-20260727-b004-project-loader.js
+          node --check debooger2000-mobileclean-20260727-b004-zip-reader.js
+          cd "$GITHUB_WORKSPACE"
+          git ls-files -z | xargs -0 -r git rm -f
+          cp "$OUT"/_headers .
+          cp "$OUT"/index.html .
+          cp "$OUT"/debooger2000-mobileclean-20260727-b004-app.css .
+          cp "$OUT"/debooger2000-mobileclean-20260727-b004-app.js .
+          cp "$OUT"/debooger2000-mobileclean-20260727-b004-audit-engine.js .
+          cp "$OUT"/debooger2000-mobileclean-20260727-b004-project-loader.js .
+          cp "$OUT"/debooger2000-mobileclean-20260727-b004-zip-reader.js .
+          git add _headers index.html debooger2000-mobileclean-20260727-b004-*.css debooger2000-mobileclean-20260727-b004-*.js
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'Deploy exact audited Debooger MobileClean B004'
+          git push origin HEAD:agent/mobileclean-b004-final
