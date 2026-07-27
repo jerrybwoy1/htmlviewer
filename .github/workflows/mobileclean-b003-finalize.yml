@@ -1,0 +1,113 @@
+name: Finalize MobileClean B003
+on:
+  push:
+    branches:
+      - agent/mobileclean-b003-final
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[b003-finalized]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/mobileclean-b003-final
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Clean source and restore direct mobile upload
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          app = Path('js/app.js')
+          text = app.read_text()
+          bad = "return'This is the part that reads the code and looks for problems. It tries hard not to scare you with guesses: clear problems and 'please check this' notes stay separate.';"
+          good = "return'This is the part that reads the code and looks for problems. It keeps clear problems and review notes separate.';"
+          if bad not in text:
+              raise SystemExit('Expected malformed quote was not found; refusing to edit an unknown app.js')
+          text = text.replace(bad, good, 1)
+
+          # Remove the unused JavaScript picker proxy. The page already uses native labels
+          # linked directly to fileInput/folderInput, so one authoritative path is enough.
+          start = text.find("function openNativePicker(kind='file'){")
+          end = text.find("\nfunction handlePickedFiles(input){", start)
+          if start < 0 or end < 0:
+              raise SystemExit('Picker proxy block not found')
+          text = text[:start] + text[end+1:]
+
+          proxy = "  const picker=e.target.closest?.('[data-file-picker]');\n  if(picker){e.preventDefault();openNativePicker(picker.dataset.filePicker);return}\n"
+          text = text.replace(proxy, '', 1)
+
+          # Build-015 style handoff: native FileList goes straight to loadProject.
+          old = "function handlePickedFiles(input){\n  const files=input?.files;\n  if(!files?.length){status('No file chosen');return}\n  loadProject(files).finally(()=>{try{input.value=''}catch{}});\n}"
+          new = "function handlePickedFiles(input){\n  const files=input?.files;\n  if(!files?.length){status('No file chosen');return}\n  status(files.length===1?'File selected. Opening…':`${files.length} files selected. Opening…`);\n  Promise.resolve(loadProject(files)).finally(()=>{try{input.value=''}catch{}});\n}"
+          if old not in text:
+              raise SystemExit('Expected picked-file handler not found')
+          text = text.replace(old, new, 1)
+          app.write_text(text)
+
+          css = Path('css/app.css')
+          c = css.read_text()
+          if 'color-scheme:light only' not in c.replace(' ', ''):
+              c = c.replace(':root{', ':root{color-scheme:light only;', 1)
+          css.write_text(c)
+
+          index = Path('index.html')
+          h = index.read_text()
+          h = h.replace('MobileClean Live B002', 'MobileClean B003')
+          h = h.replace('css/app.css?v=mobileclean-live-b002-20260727', 'css/app-mobileclean-b003.css?v=20260727-b003')
+          h = h.replace('js/app.js?v=mobileclean-live-b002-20260727', 'js/app-mobileclean-b003.js?v=20260727-b003')
+          index.write_text(h)
+
+          Path('js/app.js').rename('js/app-mobileclean-b003.js')
+          Path('css/app.css').rename('css/app-mobileclean-b003.css')
+          PY
+      - name: Audit pass 1
+        shell: bash
+        run: |
+          set -e
+          node --check js/app-mobileclean-b003.js
+          for f in js/*.js; do node --check "$f"; done
+          ! grep -R "please check this" -n js index.html css
+          ! grep -R "openNativePicker" -n js/app-mobileclean-b003.js
+          grep -q "addEventListener('change',e=>handlePickedFiles" js/app-mobileclean-b003.js
+          grep -q 'for="fileInput"' index.html
+          grep -q 'for="folderInput"' index.html || true
+      - name: Audit pass 2
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          h=Path('index.html').read_text()
+          ids=re.findall(r'\bid="([^"]+)"',h)
+          assert len(ids)==len(set(ids)), 'duplicate ids'
+          refs=[]
+          for m in re.finditer(r'(?:src|href)="([^"]+)"',h):
+              r=m.group(1)
+              if r.startswith(('http://','https://','#','data:')): continue
+              refs.append(r.split('?',1)[0])
+          for r in refs:
+              assert Path(r).exists(), f'missing local reference: {r}'
+          app=Path('js/app-mobileclean-b003.js').read_text()
+          assert "please check this" not in app
+          assert 'openNativePicker' not in app
+          assert "const files=input?.files;" in app
+          css=Path('css/app-mobileclean-b003.css').read_text().replace(' ','')
+          assert 'color-scheme:lightonly' in css
+          print('AUDIT 2 CLEAN')
+          PY
+      - name: Commit finalized B003
+        shell: bash
+        run: |
+          git config user.name "Debooger Build Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy MobileClean B003 upload repair [b003-finalized]"
+          git push origin HEAD:agent/mobileclean-b003-final
