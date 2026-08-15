@@ -1,0 +1,35 @@
+{
+  "name": "DEBOOGER2000 G15 Advanced v08 Final",
+  "description": "Versioned hosted loader for the tested DEBOOGER2000 G15 Advanced v08 web build.",
+  "source": "DEBOOGER2000-G15-Advanced-v08-FINAL-WEB.html",
+  "sha256": "aa92f8ab1ff281c59ee2cf1658df2b2630991316288451ba0a989e6f5732e7ee",
+  "standalone_sha256": "a9c4287690d69a58bbe23f97ac9c60d8e30c55548e46bd06e8808cea426c27e9",
+  "encoding": "gzip+base64",
+  "parts": [
+    "p01.txt",
+    "p02.txt",
+    "p03.txt",
+    "p04a.txt",
+    "p04b.txt",
+    "p05.txt",
+    "p06.txt",
+    "p07.txt",
+    "p08.txt",
+    "p09.txt",
+    "p10.txt",
+    "p11.txt",
+    "p12.txt",
+    "p13.txt",
+    "p14.txt",
+    "p15.txt",
+    "p16.txt"
+  ],
+  "cache": "no-store",
+  "tests": [
+    "60/60 full functional",
+    "15/15 preview/rescue/rollback/Vite",
+    "18/18 exports/viewer/paste",
+    "37/37 deep clean audit twice"
+  ],
+  "note": "Hosted copy uses online TypeScript compiler for source Vite/TS/TSX. Downloadable standalone embeds the compiler."
+}
