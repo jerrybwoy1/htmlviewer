@@ -1,0 +1,9 @@
+Rollback record for the root launcher before DEBOOGER v12 clean was published.
+
+Repository: jerrybwoy1/htmlviewer
+Branch: main
+Previous root file: index.html
+Previous root blob SHA: 39ba42aed2c275c21db5225aff9485f1f2064cbc
+Previous root title: debooger2000 — MobileClean B003
+
+The previous CSS and JS files were not deleted or overwritten during the v12 publication, so restoring the prior index.html blob restores that prior root launcher.
