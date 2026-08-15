@@ -22,6 +22,7 @@ jobs:
           ]
           root = Path('v17-clean-final')
           payload = ''.join((root / n).read_text(encoding='utf-8').strip() for n in names)
+          payload += '=' * ((4 - len(payload) % 4) % 4)
           html = gzip.decompress(base64.b64decode(payload)).decode('utf-8')
           Path('DEBOOGER2000-v17-current-source.html').write_text(html, encoding='utf-8')
           print('reconstructed bytes', len(html.encode('utf-8')))
