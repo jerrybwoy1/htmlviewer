@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#f4f6f8" name="theme-color"/>
+<title>debooger2000</title>
+<link href="css/app.css" rel="stylesheet"/>
+<script src="js/zip.js"></script>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+<div class="brand">debooger2000</div>
+<span aria-live="polite" class="status" id="statusBadge" role="status">Ready</span>
+<div class="spacer"></div>
+<button aria-haspopup="dialog" aria-label="Open project options" class="menu-btn" id="moreBtn" type="button">•••</button>
+</header>
+<div class="workspace">
+<section aria-label="Project" class="rail project-section">
+<div class="card open-card"><div class="card-h">Open</div><div class="card-b">
+<label class="dropzone" id="dropzone"><input aria-label="Choose files or ZIP" class="file-input" id="fileInput" multiple="" type="file"/><strong>Open a file, ZIP or project</strong><span class="small">Tap anywhere in this box. ZIP projects unpack automatically.</span></label>
+</div></div>
+<div class="card"><div class="card-h">What is this?</div><div class="card-b" id="projectSummary"><div class="small">Open something and I will explain it in simple English.</div></div></div>
+<details class="card files-card" open=""><summary class="card-h"><span>Files in this project</span><span class="small" id="fileCountLabel">0 files</span></summary><div class="card-b"><div class="file-list" id="fileList"><div class="small">No files loaded yet.</div></div><div class="tiny-gap"></div><label class="btn full">Compare another version<input aria-label="Choose another project version to compare" class="file-input" id="compareInput" multiple="" type="file"/></label></div></details>
+<details class="card history-card"><summary class="card-h">Older audits</summary><div class="card-b" id="history"><div class="small">No older audits saved on this device.</div></div></details>
+</section>
+<main aria-label="Project viewer" class="main" id="viewerSection">
+<div class="toolbar">
+<div aria-label="Preview device" class="device-group"><button class="device-btn active" data-device="desktop" type="button">Desktop</button><button class="device-btn" data-device="mobile" type="button">Mobile</button></div>
+<select aria-label="Desktop width" class="btn compact" id="desktopWidth"><option value="1280">1280</option><option value="1366">1366</option><option selected="" value="1440">1440</option><option value="1600">1600</option><option value="1920">1920</option><option value="2560">2560</option><option value="3440">3440</option><option value="custom">Custom</option></select>
+<span class="custom-size hidden" id="customSizeWrap"><input aria-label="Custom preview width" class="field mini-field" id="customWidth" max="7680" min="320" type="number" value="1440"/><span>×</span><input aria-label="Custom preview height" class="field mini-field" id="customHeight" max="4320" min="320" type="number" value="900"/></span>
+<button aria-label="Zoom out" class="btn compact" id="zoomOutBtn" type="button">−</button><span class="zoom-label" id="zoomLabel">100%</span><button aria-label="Zoom in" class="btn compact" id="zoomInBtn" type="button">＋</button>
+<button class="btn compact" id="fitWidthBtn" type="button">Fit width</button><button class="btn compact" id="fitPageBtn" type="button">Fit page</button><button class="btn compact" id="actualBtn" type="button">100%</button><button class="btn compact" id="refreshBtn" type="button">Refresh</button>
+<label class="row small"><input aria-label="Adapt preview for selected device" id="adaptToggle" type="checkbox"/> Adapt</label>
+</div>
+<div class="tabs" id="pageTabs"></div><div class="notice hidden" id="notice" role="status"></div>
+<div class="viewer-shell" id="viewerShell"><div class="stage-wrap" id="stageWrap"><div class="desktop-stage" id="desktopStage"><iframe class="desktop-frame" id="frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" title="Project preview"></iframe></div></div></div>
+<button class="viewer-float hidden" id="exitFullBtn" type="button">Exit full screen</button>
+</main>
+<section aria-label="Audit results" class="rail right audit-section" id="auditRail">
+<div class="card"><div class="card-h">Audit</div><div class="card-b"><div id="scoreBox"><div class="score">—</div><div class="small">Open a project to begin.</div></div><div class="tiny-gap"></div><div class="metric-grid" id="metrics"></div></div></div>
+<div class="hidden" id="compareBox"></div>
+<div class="card"><div class="card-h"><span>What needs attention</span><span class="error-tools"><button class="mini-action" id="collapseErrorsBtn" type="button">Close all</button><button aria-pressed="false" class="mini-action" id="realProblemsBtn" type="button">Real only</button></span></div><div class="card-b" id="findings"><div class="small">Errors stay closed. Tap one to read the short explanation.</div></div></div>
+<div class="card"><div class="card-h"><span>Button and control tests</span><span class="small" id="controlCount">0</span></div><div class="card-b" id="controlList"><div class="small">Safe controls are tested in a separate hidden page so the viewer you are using does not jump around.</div></div></div>
+</section></div>
+<div class="card"><div class="card-h">AI repair instruction</div><div class="card-b"><textarea aria-label="AI repair instruction" class="field prompt-area" id="promptOutput" placeholder="Run an audit first." readonly=""></textarea><div class="prompt-actions"><button class="btn" id="copyPromptBtn" type="button">Copy prompt</button><button class="btn" id="downloadPromptBtn" type="button">Download prompt</button></div></div></div>
+<div class="action-grid"><button class="btn" data-audit-action="audit" id="auditBtn" type="button">Audit again</button><button class="btn" data-audit-action="copy" id="copyBtn" type="button">Copy report</button><button class="btn" data-audit-action="download" id="downloadBtn" type="button">Download report</button></div>
+
+</div>
+
+<iframe aria-hidden="true" class="runtime-test-frame" id="testFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads" title="Automated test frame"></iframe>
+<div aria-labelledby="moreTitle" aria-modal="true" class="modal hidden" id="moreModal" role="dialog"><div class="modal-card compact-modal"><div class="modal-head"><strong id="moreTitle">Project options</strong><button class="btn compact" id="closeMoreBtn" type="button">Close</button></div><div class="more-actions">
+<label class="btn full">Open file / ZIP<input aria-label="Choose files or ZIP" class="file-input" id="fileInputTop" multiple="" type="file"/></label>
+<label class="btn full" id="folderBtn">Open folder<input aria-label="Choose project folder" class="file-input" directory="" id="folderInput" multiple="" type="file" webkitdirectory=""/></label>
+<button class="btn full" id="pasteBtn" type="button">Paste / copied file</button>
+<button class="btn full" id="fullBtn" type="button">Full screen viewer</button>
+<details class="advanced-tools"><summary>Advanced tools</summary><div class="advanced-tools-body"><button class="btn full" id="convertHtmlBtn" type="button">Convert to single HTML</button><button class="btn full" id="downloadProjectBtn" type="button">Download project ZIP</button><button class="btn full" id="markBaselineBtn" type="button">Mark approved baseline</button><button class="btn full" id="recordTestBtn" type="button">Record test</button><button class="btn full" id="replayTestBtn" type="button">Replay saved test</button><div class="advanced-status" id="advancedStatus">No advanced test data saved yet.</div></div></details>
+<details class="settings-menu"><summary>Settings</summary><div class="settings-body"><div class="small">The viewer and audit do not need an API. These providers are optional.</div><div class="section-title">Groq</div><label class="row small"><input aria-label="Enable Groq" id="groqEnabled" type="checkbox"/> Enable</label><input aria-label="Groq API key" autocomplete="off" class="field" id="groqKey" placeholder="Groq API key" type="password"/><div class="section-title">Google AI Studio</div><label class="row small"><input aria-label="Enable Google AI Studio" id="googleEnabled" type="checkbox"/> Enable</label><input aria-label="Google AI Studio API key" autocomplete="off" class="field" id="googleKey" placeholder="Google AI Studio API key" type="password"/><div class="tiny-gap"></div><button class="btn full" id="saveProviders" type="button">Use for this session</button><div class="small provider-note">Active: <span id="providerStatus">Local / no API</span></div></div></details>
+<button class="btn full" id="clearBtn" type="button">Clear current project</button>
+</div></div></div>
+<div aria-labelledby="pasteTitle" aria-modal="true" class="modal hidden" id="pasteModal" role="dialog"><div class="modal-card paste-card"><div class="modal-head"><strong id="pasteTitle">Paste into debooger2000</strong><button class="btn compact" id="closePasteBtn" type="button">Close</button></div><div class="paste-tabs"><button class="paste-tab active" data-paste="text" type="button">Code / text</button><button class="paste-tab" data-paste="clipboard" type="button">Copied file</button><button class="paste-tab" data-paste="link" type="button">Link</button></div><div id="pasteTextPanel"><textarea aria-label="Pasted code or text" class="field paste-area" id="pasteText" placeholder="Copy from iOS Files or another app, then paste here. HTML is detected automatically when possible."></textarea><div class="paste-row"><select aria-label="Pasted content type" class="field" id="pasteType"><option value="html">HTML</option><option value="css">CSS</option><option value="js">JavaScript</option><option value="json">JSON</option><option value="txt">Text</option></select><button class="btn primary" id="openPasteTextBtn" type="button">Open pasted content</button></div></div><div class="hidden" id="pasteClipboardPanel"><div class="clipboard-box"><strong>Use a copied file when iOS exposes it</strong><div class="small">Tap Read clipboard after copying a file. If iOS gives this browser text instead, paste into the Code / text box. You can always use Choose file instead.</div><button class="btn primary full" id="readClipboardBtn" type="button">Read clipboard</button><label class="btn full">Choose file instead<input aria-label="Choose copied file instead" class="file-input" id="pasteFileInput" multiple="" type="file"/></label><div class="small provider-note" id="clipboardStatus"></div></div></div><div class="hidden" id="pasteLinkPanel"><input aria-label="Direct file or ZIP link" class="field" id="pasteLink" inputmode="url" placeholder="Paste a direct file or ZIP link" type="url"/><div class="small provider-note">Some private or app-only links cannot be read by a browser. In that case choose or paste the actual file.</div><button class="btn primary full" id="openPasteLinkBtn" type="button">Open link temporarily</button></div></div></div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/typescript@5.9.3/lib/typescript.js"></script><script src="js/app.js" type="module"></script></body>
+</html>
