@@ -1,0 +1,27 @@
+{
+  "name": "DEBOOGER2000 G15 Advanced v08 Live",
+  "payload": "../g15-advanced-v08-final/",
+  "source_sha256": "aa92f8ab1ff281c59ee2cf1658df2b2630991316288451ba0a989e6f5732e7ee",
+  "parts": [
+    "p01.txt",
+    "p02.txt",
+    "p03.txt",
+    "p04a.txt",
+    "p04b.txt",
+    "p05a.txt",
+    "p05b.txt",
+    "p06.txt",
+    "p07.txt",
+    "p08.txt",
+    "p09.txt",
+    "p10.txt",
+    "p11.txt",
+    "p12.txt",
+    "p13.txt",
+    "p14.txt",
+    "p15.txt",
+    "p16.txt"
+  ],
+  "cache": "no-store",
+  "status": "tested-live-loader"
+}
