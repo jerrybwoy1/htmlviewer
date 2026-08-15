@@ -15,15 +15,17 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import base64, gzip
-          names = [
-              'p01.txt','p02.txt','p03.txt','p04.txt','p05.txt','p06.txt','p07.txt','p08.txt','p09.txt','p10.txt','p11.txt',
-              'p120.txt','p121.txt','p122.txt','p130.txt','p131.txt','p132.txt','p140.txt','p141.txt','p142.txt','p150.txt','p151.txt','p152.txt'
-          ]
+          import base64, gzip, re
+          loader = Path('index.html').read_text(encoding='utf-8')
+          names = re.findall(r'v17-clean-final/([^"\']+?\.txt)', loader)
+          print('chunks', names)
           root = Path('v17-clean-final')
-          payload = ''.join((root / n).read_text(encoding='utf-8').strip() for n in names)
+          payload = ''.join((root / n).read_text(encoding='utf-8') for n in names).strip()
+          payload = ''.join(payload.split())
           payload += '=' * ((4 - len(payload) % 4) % 4)
-          html = gzip.decompress(base64.b64decode(payload)).decode('utf-8')
+          packed = base64.b64decode(payload, validate=True)
+          print('payload chars', len(payload), 'packed bytes', len(packed), 'header', packed[:4].hex())
+          html = gzip.decompress(packed).decode('utf-8')
           Path('DEBOOGER2000-v17-current-source.html').write_text(html, encoding='utf-8')
           print('reconstructed bytes', len(html.encode('utf-8')))
       - uses: actions/upload-artifact@v4
