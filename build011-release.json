@@ -5,9 +5,12 @@
   "source_of_truth_sha256": "b46d581a8ad0c085ec0285ac6ebdcb498e3c3d117899f37b030a9db62b9eb919",
   "final_sha256": "5336273da42ea2754b5ad2ce4dd7cff649fb9557a2841c30963723a309a20811",
   "source_zip_sha256": "7b5022c6dee7691faf0906bf5a1691e64ab52e88762e131817bc82aad86cb16f",
-  "shell_sha256": "9f6339ae2d5777aa37ded0ef46b06ffea66e4df81bf6b7d6adad6749d527138f",
+  "base_shell_sha256": "80594717853eb4aa7e72dbcef2f7493177b923f8c8fa20687a9be3545e96cab8",
+  "shell_sha256": "da85ae59532bfc9204734b91b25a95ab6d1538b86ce45bf0897368dc4cdd8119",
   "source_sha256": "a0d2856a02a48266d93b42397b48b9e049acc4c2549e566083a37db61f1f8fd7",
   "ts_sha256": "6469b2426802dc695e374f933d79555a13d47acc8a37dd0c9a4df63d16d9a38e",
+  "delta_sha256": "fa4246116f77e33b1f8b449922758d248654577502bf189a36ed9e5b9e50530f",
+  "delta_parts": ["build011-live-delta/p001.txt","build011-live-delta/p002.txt","build011-live-delta/p003.txt","build011-live-delta/p004.txt","build011-live-delta/p005.txt","build011-live-delta/p006.txt"],
   "clean_pass_1": "clean",
   "clean_pass_2": "clean"
 }
