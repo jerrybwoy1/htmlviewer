@@ -1,6 +1,6 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f5f7f5"><meta http-equiv="Cache-Control" content="no-store,no-cache,must-revalidate,max-age=0"><title>debooger2000</title><style>html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f7f5;color:#23272b}.boot{min-height:100vh;display:grid;place-items:center;padding:20px;box-sizing:border-box}.boot div{background:#fff;border:1px solid #dde3dd;border-radius:12px;padding:18px 22px;font-size:13px;max-width:560px}</style></head><body><div class="boot"><div id="bootmsg">Opening verified DEBOOGER Build006…</div></div><script>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f5f7f5"><meta http-equiv="Cache-Control" content="no-store,no-cache,must-revalidate,max-age=0"><title>debooger2000</title><style>html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f7f5;color:#23272b}.boot{min-height:100vh;display:grid;place-items:center;padding:20px;box-sizing:border-box}.boot div{background:#fff;border:1px solid #dde3dd;border-radius:12px;padding:18px 22px;font-size:13px;max-width:560px}</style></head><body><div class="boot"><div id="bootmsg">Opening verified DEBOOGER Build007…</div></div><script>
 (async()=>{try{
-const FINAL='65954022aea2079250df9c4bacb08116be71c8d4d51ca7f3f6263b7b0fd738c5',TS='6469b2426802dc695e374f933d79555a13d47acc8a37dd0c9a4df63d16d9a38e',BASE_SHELL='d6e12c8078f087c9e34488890ee7dfdacd09219ec37e7d6a31c55051cce700a8',BASE_SOURCE='93973b83509c748ab02a12a8cb8d824a619fafa54058227303367d28df7948e0',NEW_SHELL='1e2dbe9cb78bb12996ca499dd007622d1dfc70f7200e932f6afb41f1741907ac',NEW_SOURCE='c00b50dd9aebabcf21e075264764006e0503922ac10561f5737f7fe55dcf046d';
+const FINAL='5fa06d32dac806f9da24f18fb780eb962e63f5295aa5061553b2a3aef5ac3fbb',TS='6469b2426802dc695e374f933d79555a13d47acc8a37dd0c9a4df63d16d9a38e',BASE_SHELL='d6e12c8078f087c9e34488890ee7dfdacd09219ec37e7d6a31c55051cce700a8',BASE_SOURCE='93973b83509c748ab02a12a8cb8d824a619fafa54058227303367d28df7948e0',NEW_SHELL='1511873895e926027ca40483c11ea0e3a24b57d70b612774c36076a52af1c445',NEW_SOURCE='903e5e386143476bf1169ad63a65d6bb6b9b8fc733b80c4534fe7add3573750c';
 const order=['js/app.js','js/audit-engine.js','js/device-engine.js','js/preview-helper.js','js/project-engine.js','js/provider-settings.js','js/storage.js'];
 const oldNames=['p001.txt','p002.txt','p003.txt','p004.txt','p005.txt','p006.txt','p007.txt','p008.txt','p009.txt','p010_1.txt','p010_2.txt','p010_3.txt','p011_1.txt','p011_2.txt','p011_3.txt','p012_1.txt','p012_2.txt','p012_3.txt','p013.txt','p014.txt','p015.txt','p016.txt'];
 const get=async p=>{const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw new Error(p+' '+r.status);return r.text()};
@@ -10,19 +10,19 @@ const digest=async s=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-
 const b64=s=>{const u=new TextEncoder().encode(s);let out='';for(let i=0;i<u.length;i+=32768)out+=String.fromCharCode(...u.subarray(i,i+32768));return btoa(out)};
 const patchLines=(text,ops)=>{const lines=text.match(/.*(?:\n|$)/g).filter(Boolean);for(const [a,b,repl] of [...ops].sort((x,y)=>y[0]-x[0]))lines.splice(a,b-a,...repl);return lines.join('')};
 if(typeof DecompressionStream!=='function'||!crypto?.subtle)throw new Error('This browser is missing required verification support.');
-document.getElementById('bootmsg').textContent='Verifying DEBOOGER Build006…';
-const patch=JSON.parse(await get('build006-patch.json'));
-if(patch.final_sha256!==FINAL||patch.ts_sha256!==TS||patch.base_shell_sha256!==BASE_SHELL||patch.base_source_sha256!==BASE_SOURCE||patch.shell_sha256!==NEW_SHELL||patch.source_sha256!==NEW_SOURCE)throw new Error('Build006 patch manifest mismatch');
+document.getElementById('bootmsg').textContent='Verifying DEBOOGER Build007…';
+const patch=JSON.parse(await get('build007-patch.json'));
+if(patch.final_sha256!==FINAL||patch.ts_sha256!==TS||patch.base_shell_sha256!==BASE_SHELL||patch.base_source_sha256!==BASE_SOURCE||patch.shell_sha256!==NEW_SHELL||patch.source_sha256!==NEW_SOURCE)throw new Error('Build007 patch manifest mismatch');
 const old=await unzip((await Promise.all(oldNames.map(n=>get('v18-clean-final/'+n)))).join(''));
 const tm=old.match(/<script id="debooger-typescript-source">([\s\S]*?)<\/script>/);if(!tm)throw new Error('Compiler payload not found');const ts=tm[1];if(await digest(ts)!==TS)throw new Error('Compiler verification failed');
 let shell=await unzip(await get('build003-payload/shell-001.b64'));if(await digest(shell)!==BASE_SHELL)throw new Error('Base shell verification failed');
 const modules={};for(const name of order)modules[name]=await unzip(await get('build003-payload/'+name.split('/').pop()+'.b64'));
 const baseSource=JSON.stringify(Object.fromEntries(order.map(name=>[name,b64(modules[name])])));if(await digest(baseSource)!==BASE_SOURCE)throw new Error('Base source verification failed');
-shell=patchLines(shell,patch.shell_ops||[]);if(await digest(shell)!==NEW_SHELL)throw new Error('Build006 shell verification failed');
+shell=patchLines(shell,patch.shell_ops||[]);if(await digest(shell)!==NEW_SHELL)throw new Error('Build007 shell verification failed');
 for(const name of Object.keys(patch.module_ops||{}))modules[name]=patchLines(modules[name],patch.module_ops[name]);
-const source=JSON.stringify(Object.fromEntries(order.map(name=>[name,b64(modules[name])])));if(await digest(source)!==NEW_SOURCE)throw new Error('Build006 source verification failed');
-if((shell.match(/__SOURCE_JSON__/g)||[]).length!==1||(shell.match(/__TS__/g)||[]).length!==1)throw new Error('Build006 template invalid');
-const html=shell.replace('__SOURCE_JSON__',source).replace('__TS__',ts);if(await digest(html)!==FINAL)throw new Error('Final Build006 verification failed');
+const source=JSON.stringify(Object.fromEntries(order.map(name=>[name,b64(modules[name])])));if(await digest(source)!==NEW_SOURCE)throw new Error('Build007 source verification failed');
+if((shell.match(/__SOURCE_JSON__/g)||[]).length!==1||(shell.match(/__TS__/g)||[]).length!==1)throw new Error('Build007 template invalid');
+const html=shell.replace('__SOURCE_JSON__',source).replace('__TS__',ts);if(await digest(html)!==FINAL)throw new Error('Final Build007 verification failed');
 document.open();document.write(html);document.close();
-}catch(e){document.body.innerHTML='<div class="boot"><div>Could not open verified DEBOOGER Build006: '+String(e.message||e).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div></div>'}})();
+}catch(e){document.body.innerHTML='<div class="boot"><div>Could not open verified DEBOOGER Build007: '+String(e.message||e).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div></div>'}})();
 </script></body></html>
