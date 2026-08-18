@@ -1,0 +1,15 @@
+{
+  "final_sha256": "063c5ab084145c9b21c42c4ca7d71d9b6d633d9c9d5976d575f68c5b88fde5fb",
+  "typescript_sha256": "6469b2426802dc695e374f933d79555a13d47acc8a37dd0c9a4df63d16d9a38e",
+  "shell_sha256": "d6e12c8078f087c9e34488890ee7dfdacd09219ec37e7d6a31c55051cce700a8",
+  "source_json_sha256": "93973b83509c748ab02a12a8cb8d824a619fafa54058227303367d28df7948e0",
+  "order": [
+    "js/app.js",
+    "js/audit-engine.js",
+    "js/device-engine.js",
+    "js/preview-helper.js",
+    "js/project-engine.js",
+    "js/provider-settings.js",
+    "js/storage.js"
+  ]
+}
