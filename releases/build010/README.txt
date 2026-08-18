@@ -1,0 +1,3 @@
+DEBOOGER2000 Build010 verified release staging.
+Standalone file SHA-256: b46d581a8ad0c085ec0285ac6ebdcb498e3c3d117899f37b030a9db62b9eb919
+Source ZIP SHA-256: e5df63f8ecc13fc0fe761f0c6942ccdff490dc6c63de34b454ac677b5e3807a0
