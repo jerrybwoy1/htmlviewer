@@ -1,0 +1,13 @@
+{
+  "build": "BUILD011",
+  "visible_label": "DEBOOGER 011",
+  "source_of_truth": "BUILD010",
+  "source_of_truth_sha256": "b46d581a8ad0c085ec0285ac6ebdcb498e3c3d117899f37b030a9db62b9eb919",
+  "final_sha256": "5336273da42ea2754b5ad2ce4dd7cff649fb9557a2841c30963723a309a20811",
+  "source_zip_sha256": "7b5022c6dee7691faf0906bf5a1691e64ab52e88762e131817bc82aad86cb16f",
+  "shell_sha256": "9f6339ae2d5777aa37ded0ef46b06ffea66e4df81bf6b7d6adad6749d527138f",
+  "source_sha256": "a0d2856a02a48266d93b42397b48b9e049acc4c2549e566083a37db61f1f8fd7",
+  "ts_sha256": "6469b2426802dc695e374f933d79555a13d47acc8a37dd0c9a4df63d16d9a38e",
+  "clean_pass_1": "clean",
+  "clean_pass_2": "clean"
+}
