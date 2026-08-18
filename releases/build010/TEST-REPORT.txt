@@ -1,0 +1,11 @@
+DEBOOGER2000 BUILD010 TEST REPORT
+Final SHA-256: b46d581a8ad0c085ec0285ac6ebdcb498e3c3d117899f37b030a9db62b9eb919
+Clean Pass 1: PASS
+Clean Pass 2: PASS
+CRM fixture: 94, 1/1 runtime page verified, 24 controls tested.
+Built React/Vite fixture: 100, 1/1 runtime page verified.
+Diamond IQ source ZIP: correctly failed runtime verification because src/components/Header.tsx and src/components/SettingsView.tsx both import missing ../lib/zipExporter. Build010 reports both missing local module defects and does not falsely mark the app healthy.
+Visible build label: DEBOOGER 010.
+Old Custom/700x900 toolbar removed.
+Global press feedback and copy feedback verified.
+No source changes between clean passes.
